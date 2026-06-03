@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
-import { FileText, Save, FileCheck, Copy } from 'lucide-react';
+import { FileText, Save, FileCheck, Copy, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,7 +134,7 @@ export default function Home() {
                     <Label className="text-base font-semibold">Settings</Label>
                     
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="applyTax" className="flex-1 cursor-pointer">Apply 16.5% VAT</Label>
+                      <Label htmlFor="applyTax" className="flex-1 cursor-pointer">Apply 17.5% VAT</Label>
                       <Switch id="applyTax" checked={data.applyTax} onCheckedChange={checked => handleChange('applyTax', checked)} />
                     </div>
                     
@@ -170,14 +170,60 @@ export default function Home() {
             <CardHeader className="bg-muted/20 border-b border-border pb-4">
               <CardTitle className="text-lg">Additional Information</CardTitle>
             </CardHeader>
-            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
+            <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2 md:col-span-1">
                 <Label htmlFor="notes">Notes & Terms</Label>
                 <Textarea id="notes" rows={4} value={data.notes} onChange={e => handleChange('notes', e.target.value)} placeholder="Terms and conditions..." className="resize-none" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="preparedBy">Prepared By</Label>
                 <Input id="preparedBy" value={data.preparedBy} onChange={e => handleChange('preparedBy', e.target.value)} placeholder="Sales Representative Name" />
+              </div>
+              <div className="space-y-2">
+                <Label>Authorized Signature</Label>
+                <div
+                  className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${data.signatureImage ? 'border-primary/40 bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-primary/5'}`}
+                  onClick={() => document.getElementById('sig-upload')?.click()}
+                  data-testid="button-upload-signature"
+                >
+                  {data.signatureImage ? (
+                    <div className="space-y-2">
+                      <img src={data.signatureImage} alt="Signature" className="max-h-16 mx-auto object-contain" />
+                      <p className="text-xs text-muted-foreground">Click to replace</p>
+                    </div>
+                  ) : (
+                    <div className="py-2 space-y-1">
+                      <Upload className="w-6 h-6 mx-auto text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Upload signature image</p>
+                      <p className="text-xs text-muted-foreground/60">PNG, JPG supported</p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  id="sig-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  data-testid="input-signature-file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => handleChange('signatureImage', ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }}
+                />
+                {data.signatureImage && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive w-full"
+                    onClick={() => handleChange('signatureImage', '')}
+                    data-testid="button-clear-signature"
+                  >
+                    Remove Signature
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

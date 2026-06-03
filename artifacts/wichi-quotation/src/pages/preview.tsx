@@ -95,16 +95,28 @@ export default function Preview() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 text-sm text-muted-foreground border-t border-border pt-8">
+          <div className="grid grid-cols-2 gap-8 text-sm text-muted-foreground border-t border-primary/20 pt-8">
             <div>
-              <h4 className="font-bold text-foreground mb-2">Terms & Conditions</h4>
-              <p className="whitespace-pre-wrap">{data.notes}</p>
+              <h4 className="font-bold text-foreground mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Terms &amp; Conditions</h4>
+              <p className="whitespace-pre-wrap leading-relaxed">{data.notes}</p>
             </div>
             <div>
-              <h4 className="font-bold text-foreground mb-2">Prepared By</h4>
-              <p>{data.preparedBy}</p>
-              <div className="mt-6 border-b border-border w-48"></div>
-              <p className="text-xs mt-1 text-muted-foreground/60">Authorized Signature</p>
+              <h4 className="font-bold text-foreground mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
+              <div className="mt-2 min-h-[72px] flex items-end">
+                {data.signatureImage ? (
+                  <img
+                    src={data.signatureImage}
+                    alt="Authorized Signature"
+                    className="max-h-16 max-w-[200px] object-contain"
+                  />
+                ) : (
+                  <div className="w-52 border-b-2 border-foreground/40"></div>
+                )}
+              </div>
+              <div className="mt-3 border-t border-primary/20 pt-2 space-y-0.5">
+                <p className="font-semibold text-foreground">{data.preparedBy}</p>
+                <p className="text-xs text-muted-foreground">Authorized Signatory — Wichi Farms And Agro Solutions</p>
+              </div>
             </div>
           </div>
           

@@ -20,6 +20,7 @@ export interface QuotationData {
   applyTax: boolean;
   notes: string;
   preparedBy: string;
+  signatureImage: string;
 }
 
 const STORAGE_KEY = 'wichi-quotation-data';
@@ -38,7 +39,8 @@ export const defaultQuotationData: QuotationData = {
   discountValue: 0,
   applyTax: true,
   notes: 'Payment due within 30 days. All prices are in Malawian Kwacha (MWK).',
-  preparedBy: 'Sales Team'
+  preparedBy: 'Sales Team',
+  signatureImage: ''
 };
 
 export function loadQuotationData(): QuotationData {
