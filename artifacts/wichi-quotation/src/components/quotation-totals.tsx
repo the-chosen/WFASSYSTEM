@@ -42,8 +42,8 @@ export function QuotationTotals({ data }: QuotationTotalsProps) {
       )}
 
       <div className="flex justify-between items-center px-5 py-3" style={{ background: 'hsl(var(--primary))' }}>
-        <span className="font-bold text-white text-base uppercase tracking-wide">Grand Total</span>
-        <span className="font-bold text-white text-base">MWK {formatCurrency(grandTotal)}</span>
+        <span className="font-bold text-white text-base uppercase tracking-wide whitespace-nowrap">Grand Total</span>
+        <span className="font-bold text-white text-base whitespace-nowrap">MWK {formatCurrency(grandTotal)}</span>
       </div>
     </div>
   );
