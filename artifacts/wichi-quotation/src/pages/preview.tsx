@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QuotationHeader } from '@/components/quotation-header';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
-import { loadQuotationData, QuotationData, formatCurrency } from '@/lib/quotation-store';
+import { loadQuotationData, QuotationData } from '@/lib/quotation-store';
 import { format, parseISO } from 'date-fns';
 
 export default function Preview() {
   const [, setLocation] = useLocation();
   const [data, setData] = useState<QuotationData | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const docRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setData(loadQuotationData());
@@ -19,8 +21,47 @@ export default function Preview() {
 
   if (!data) return null;
 
-  const handlePrint = () => {
-    window.print();
+  const handleSavePdf = async () => {
+    if (!docRef.current) return;
+    setExporting(true);
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const canvas = await html2canvas(docRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.98);
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = pdfWidth / imgWidth;
+      const scaledHeight = imgHeight * ratio;
+
+      let position = 0;
+      let heightLeft = scaledHeight;
+
+      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`Quotation-${data.quotationNumber}.pdf`);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -42,12 +83,13 @@ export default function Preview() {
         <Button variant="ghost" onClick={() => setLocation('/')} className="text-foreground hover:bg-black/5">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Edit
         </Button>
-        <Button onClick={handlePrint} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
-          <Printer className="w-4 h-4 mr-2" /> Print / Save as PDF
+        <Button onClick={handleSavePdf} disabled={exporting} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
+          {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+          {exporting ? 'Generating PDF...' : 'Save as PDF'}
         </Button>
       </div>
 
-      <div className="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm] print-document overflow-hidden">
+      <div ref={docRef} className="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm] print-document overflow-hidden">
         <div className="p-10 md:p-14">
           <QuotationHeader />
           
