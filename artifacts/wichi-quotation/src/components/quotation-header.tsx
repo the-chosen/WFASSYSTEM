@@ -7,7 +7,7 @@ export function QuotationHeader() {
         <img
           src="/wichi-logo.png"
           alt="Wichi Farms And Agro Solutions"
-          className="h-14 w-auto object-contain"
+          className="h-20 w-auto object-contain"
         />
       </div>
 

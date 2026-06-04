@@ -163,14 +163,14 @@ export default function Preview() {
             </div>
             <div>
               <h4 className="font-bold mb-1.5 uppercase tracking-wider text-[10px]" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
-              <div className="mt-2 min-h-[52px] flex items-end">
+              <div className="mt-1.5 min-h-[36px] flex items-end">
                 {data.signatureImage ? (
-                  <img src={data.signatureImage} alt="Authorized Signature" className="max-h-12 max-w-[180px] object-contain" />
+                  <img src={data.signatureImage} alt="Authorized Signature" className="max-h-10 max-w-[160px] object-contain" />
                 ) : (
                   <div className="w-44 border-b-2 border-foreground/40"></div>
                 )}
               </div>
-              <div className="mt-2 border-t border-primary/20 pt-1.5 space-y-0.5">
+              <div className="mt-1 border-t border-primary/20 pt-1 space-y-0.5">
                 <p className="font-semibold text-foreground text-xs">{data.preparedBy}</p>
                 <p className="text-[10px] text-muted-foreground">Authorized Signatory — Wichi Farms And Agro Solutions</p>
               </div>
@@ -178,8 +178,8 @@ export default function Preview() {
           </div>
 
           {/* Footer note */}
-          <div className="mt-4 text-center text-[10px] text-muted-foreground/60 font-medium">
-            Thank you for choosing Wichi Farms And Agro Solutions.
+          <div className="mt-4 text-center text-[10px] text-muted-foreground/70">
+            <span className="font-bold italic">Thank you for choosing Wichi farms and agro solutions.</span>
           </div>
 
         </div>
