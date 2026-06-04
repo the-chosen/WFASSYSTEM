@@ -10,13 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: quotations
+    description: Quotation management
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +25,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /quotations:
+    get:
+      operationId: listQuotations
+      tags: [quotations]
+      summary: List all saved quotations
+      responses:
+        "200":
+          description: List of quotations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuotationSummary"
+    post:
+      operationId: createQuotation
+      tags: [quotations]
+      summary: Save a new quotation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotationPayload"
+      responses:
+        "201":
+          description: Created quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /quotations/{id}:
+    get:
+      operationId: getQuotation
+      tags: [quotations]
+      summary: Get a single quotation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quotation record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateQuotation
+      tags: [quotations]
+      summary: Update an existing quotation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuotationPayload"
+      responses:
+        "200":
+          description: Updated quotation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteQuotation
+      tags: [quotations]
+      summary: Delete a quotation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +144,102 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    LineItem:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: number
+        unitPrice:
+          type: number
+      required: [id, description, quantity, unitPrice]
+
+    QuotationPayload:
+      type: object
+      properties:
+        quotationNumber:
+          type: string
+        date:
+          type: string
+        validUntil:
+          type: string
+        clientName:
+          type: string
+        companyName:
+          type: string
+        address:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LineItem"
+        discountType:
+          type: string
+          enum: [fixed, percentage]
+        discountValue:
+          type: number
+        applyTax:
+          type: boolean
+        notes:
+          type: string
+        preparedBy:
+          type: string
+        signatureImage:
+          type: string
+      required:
+        - quotationNumber
+        - date
+        - validUntil
+        - clientName
+        - items
+        - discountType
+        - discountValue
+        - applyTax
+
+    QuotationRecord:
+      allOf:
+        - $ref: "#/components/schemas/QuotationPayload"
+        - type: object
+          properties:
+            id:
+              type: integer
+            createdAt:
+              type: string
+            updatedAt:
+              type: string
+          required: [id, createdAt, updatedAt]
+
+    QuotationSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        quotationNumber:
+          type: string
+        clientName:
+          type: string
+        companyName:
+          type: string
+        date:
+          type: string
+        validUntil:
+          type: string
+        createdAt:
+          type: string
+      required: [id, quotationNumber, clientName, date, createdAt]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

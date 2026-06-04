@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'wouter';
-import { FileText, Save, FileCheck, Copy, Upload } from 'lucide-react';
+import { useLocation, useSearch } from 'wouter';
+import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,38 +10,165 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
-import { loadQuotationData, saveQuotationData, generateNextQuotationNumber, QuotationData } from '@/lib/quotation-store';
+import { loadQuotationData, saveQuotationData, defaultQuotationData, QuotationData } from '@/lib/quotation-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCreateQuotation, useUpdateQuotation, useGetQuotation } from '@workspace/api-client-react';
+import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+
+function generateNextNumber(current: string): string {
+  const year = new Date().getFullYear();
+  if (current.includes(year.toString())) {
+    const parts = current.split('-');
+    const seq = parseInt(parts[2], 10);
+    if (!isNaN(seq)) return `QT-${year}-${(seq + 1).toString().padStart(3, '0')}`;
+  }
+  return `QT-${year}-001`;
+}
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const searchStr = useSearch();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const params = new URLSearchParams(searchStr);
+  const loadId = params.get('load') ? Number(params.get('load')) : null;
+
   const [data, setData] = useState<QuotationData | null>(null);
+  const [savedId, setSavedId] = useState<number | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const { data: remoteQuotation, isLoading: loadingRemote } = useGetQuotation(
+    loadId ?? 0,
+  );
 
   useEffect(() => {
-    setData(loadQuotationData());
-  }, []);
-
-  useEffect(() => {
-    if (data) {
-      const timer = setTimeout(() => {
-        saveQuotationData(data);
-      }, 500);
-      return () => clearTimeout(timer);
+    if (remoteQuotation && loadId) {
+      const q = remoteQuotation;
+      const mapped: QuotationData = {
+        quotationNumber: q.quotationNumber,
+        date: q.date,
+        validUntil: q.validUntil,
+        clientName: q.clientName,
+        companyName: q.companyName ?? '',
+        address: q.address ?? '',
+        email: q.email ?? '',
+        phone: q.phone ?? '',
+        items: (q.items ?? []) as QuotationData['items'],
+        discountType: (q.discountType ?? 'fixed') as 'fixed' | 'percentage',
+        discountValue: typeof q.discountValue === 'number' ? q.discountValue : 0,
+        applyTax: q.applyTax ?? true,
+        notes: q.notes ?? '',
+        preparedBy: q.preparedBy ?? '',
+        signatureImage: q.signatureImage ?? '',
+      };
+      setData(mapped);
+      setSavedId(loadId);
+      saveQuotationData(mapped);
     }
-  }, [data]);
+  }, [remoteQuotation, loadId]);
 
-  if (!data) return null;
+  useEffect(() => {
+    if (!loadId) {
+      setData(loadQuotationData());
+    }
+  }, [loadId]);
+
+  useEffect(() => {
+    if (!data || loadId) return;
+    const timer = setTimeout(() => saveQuotationData(data), 500);
+    return () => clearTimeout(timer);
+  }, [data, loadId]);
+
+  const createMutation = useCreateQuotation({
+    mutation: {
+      onSuccess: (result) => {
+        setSavedId(result.id);
+        setSaveStatus('saved');
+        queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
+        toast({ title: 'Quotation saved', description: `Saved as ${result.quotationNumber}` });
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      },
+      onError: () => {
+        setSaveStatus('idle');
+        toast({ title: 'Save failed', description: 'Could not save to database.', variant: 'destructive' });
+      },
+    },
+  });
+
+  const updateMutation = useUpdateQuotation({
+    mutation: {
+      onSuccess: (result) => {
+        setSaveStatus('saved');
+        queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
+        toast({ title: 'Quotation updated', description: `Updated ${result.quotationNumber}` });
+        setTimeout(() => setSaveStatus('idle'), 3000);
+      },
+      onError: () => {
+        setSaveStatus('idle');
+        toast({ title: 'Update failed', description: 'Could not update the quotation.', variant: 'destructive' });
+      },
+    },
+  });
+
+  if (!data || (loadId && loadingRemote)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleChange = (field: keyof QuotationData, value: any) => {
     setData(prev => prev ? { ...prev, [field]: value } : prev);
   };
 
-  const handleGenerateNextNumber = () => {
-    handleChange('quotationNumber', generateNextQuotationNumber());
+  const handleSaveToDb = () => {
+    if (!data) return;
+    setSaveStatus('saving');
+    const payload = {
+      quotationNumber: data.quotationNumber,
+      date: data.date,
+      validUntil: data.validUntil,
+      clientName: data.clientName,
+      companyName: data.companyName,
+      address: data.address,
+      email: data.email,
+      phone: data.phone,
+      items: data.items,
+      discountType: data.discountType,
+      discountValue: data.discountValue,
+      applyTax: data.applyTax,
+      notes: data.notes,
+      preparedBy: data.preparedBy,
+      signatureImage: data.signatureImage,
+    };
+    if (savedId) {
+      updateMutation.mutate({ id: savedId, data: payload });
+    } else {
+      createMutation.mutate({ data: payload });
+    }
   };
 
+  const handleNew = () => {
+    const newData = {
+      ...defaultQuotationData,
+      quotationNumber: generateNextNumber(data.quotationNumber),
+      date: new Date().toISOString().split('T')[0],
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    };
+    setData(newData);
+    setSavedId(null);
+    setSaveStatus('idle');
+    saveQuotationData(newData);
+    setLocation('/');
+  };
+
+  const isSaving = saveStatus === 'saving';
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -56,12 +183,30 @@ export default function Home() {
             </h1>
             <p className="text-muted-foreground mt-1">Create professional quotations for Wichi Farms clients.</p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={() => saveQuotationData(data)}>
-              <Save className="w-4 h-4 mr-2" /> Save Draft
+          <div className="flex gap-2 flex-wrap justify-end">
+            <Button variant="outline" size="sm" onClick={handleNew}>
+              <Plus className="w-4 h-4 mr-1" /> New
             </Button>
-            <Button onClick={() => setLocation('/preview')} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <FileCheck className="w-4 h-4 mr-2" /> Preview & Print
+            <Button variant="outline" size="sm" onClick={() => setLocation('/history')}>
+              <History className="w-4 h-4 mr-1" /> History
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveToDb}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : saveStatus === 'saved' ? (
+                <CheckCircle2 className="w-4 h-4 mr-1 text-green-600" />
+              ) : (
+                <Save className="w-4 h-4 mr-1" />
+              )}
+              {savedId ? 'Update' : 'Save'}
+            </Button>
+            <Button onClick={() => setLocation('/preview')} className="bg-primary hover:bg-primary/90 text-primary-foreground" size="sm">
+              <FileCheck className="w-4 h-4 mr-1" /> Preview & Print
             </Button>
           </div>
         </div>
@@ -104,7 +249,7 @@ export default function Home() {
                 <Label htmlFor="quotationNumber">Quotation Number</Label>
                 <div className="flex gap-2">
                   <Input id="quotationNumber" value={data.quotationNumber} onChange={e => handleChange('quotationNumber', e.target.value)} />
-                  <Button variant="outline" size="icon" onClick={handleGenerateNextNumber} title="Auto-increment">
+                  <Button variant="outline" size="icon" onClick={() => handleChange('quotationNumber', generateNextNumber(data.quotationNumber))} title="Auto-increment">
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
@@ -117,6 +262,11 @@ export default function Home() {
                 <Label htmlFor="validUntil">Valid Until</Label>
                 <Input id="validUntil" type="date" value={data.validUntil} onChange={e => handleChange('validUntil', e.target.value)} />
               </div>
+              {savedId && (
+                <p className="text-xs text-muted-foreground pt-1">
+                  DB ID: #{savedId} — click Update to sync changes.
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -127,17 +277,17 @@ export default function Home() {
             </CardHeader>
             <CardContent className="pt-6">
               <LineItemsTable items={data.items} onChange={items => handleChange('items', items)} />
-              
+
               <div className="mt-8 flex flex-col md:flex-row justify-between items-start gap-8">
                 <div className="w-full md:w-1/2 space-y-6">
                   <div className="space-y-3 p-4 bg-muted/20 rounded-lg border border-border">
                     <Label className="text-base font-semibold">Settings</Label>
-                    
+
                     <div className="flex items-center justify-between">
                       <Label htmlFor="applyTax" className="flex-1 cursor-pointer">Apply 17.5% VAT</Label>
                       <Switch id="applyTax" checked={data.applyTax} onCheckedChange={checked => handleChange('applyTax', checked)} />
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-2 pt-2">
                       <div className="space-y-2">
                         <Label>Discount Type</Label>
@@ -158,7 +308,7 @@ export default function Home() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="w-full md:w-auto min-w-[300px]">
                   <QuotationTotals data={data} />
                 </div>
@@ -184,7 +334,6 @@ export default function Home() {
                 <div
                   className={`border-2 border-dashed rounded-lg p-3 text-center cursor-pointer transition-colors ${data.signatureImage ? 'border-primary/40 bg-primary/5' : 'border-border hover:border-primary/40 hover:bg-primary/5'}`}
                   onClick={() => document.getElementById('sig-upload')?.click()}
-                  data-testid="button-upload-signature"
                 >
                   {data.signatureImage ? (
                     <div className="space-y-2">
@@ -204,7 +353,6 @@ export default function Home() {
                   type="file"
                   accept="image/*"
                   className="hidden"
-                  data-testid="input-signature-file"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -219,7 +367,6 @@ export default function Home() {
                     size="sm"
                     className="text-destructive hover:text-destructive w-full"
                     onClick={() => handleChange('signatureImage', '')}
-                    data-testid="button-clear-signature"
                   >
                     Remove Signature
                   </Button>
