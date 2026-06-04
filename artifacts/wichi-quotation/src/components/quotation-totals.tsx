@@ -20,33 +20,33 @@ export function QuotationTotals({ data }: QuotationTotalsProps) {
 
   return (
     <div className="w-full border border-primary/20 rounded-lg text-sm" style={{ overflow: 'visible' }}>
-      <div className="flex justify-between items-center px-5 py-2.5 bg-primary/5 border-b border-primary/10 rounded-t-lg">
-        <span className="text-muted-foreground font-medium whitespace-nowrap">Subtotal</span>
-        <span className="font-semibold whitespace-nowrap ml-8">MWK {formatCurrency(subtotal)}</span>
+      <div className="flex justify-between items-center px-4 py-2 bg-primary/5 border-b border-primary/10 rounded-t-lg">
+        <span className="text-muted-foreground font-medium whitespace-nowrap text-xs">Subtotal</span>
+        <span className="font-semibold whitespace-nowrap ml-8 text-xs">MWK {formatCurrency(subtotal)}</span>
       </div>
 
       {data.discountValue > 0 && (
-        <div className="flex justify-between items-center px-5 py-2.5 bg-amber-50 border-b border-primary/10">
-          <span className="text-amber-700 font-medium whitespace-nowrap">
+        <div className="flex justify-between items-center px-4 py-2 bg-amber-50 border-b border-primary/10">
+          <span className="text-amber-700 font-medium whitespace-nowrap text-xs">
             Discount {data.discountType === 'percentage' && `(${data.discountValue}%)`}
           </span>
-          <span className="text-amber-700 font-semibold whitespace-nowrap ml-8">- MWK {formatCurrency(discountAmount)}</span>
+          <span className="text-amber-700 font-semibold whitespace-nowrap ml-8 text-xs">- MWK {formatCurrency(discountAmount)}</span>
         </div>
       )}
 
       {data.applyTax && (
-        <div className="flex justify-between items-center px-5 py-2.5 bg-primary/5 border-b border-primary/10">
-          <span className="text-muted-foreground font-medium whitespace-nowrap">VAT (17.5%)</span>
-          <span className="font-semibold whitespace-nowrap ml-8">MWK {formatCurrency(taxAmount)}</span>
+        <div className="flex justify-between items-center px-4 py-2 bg-primary/5 border-b border-primary/10">
+          <span className="text-muted-foreground font-medium whitespace-nowrap text-xs">VAT (17.5%)</span>
+          <span className="font-semibold whitespace-nowrap ml-8 text-xs">MWK {formatCurrency(taxAmount)}</span>
         </div>
       )}
 
       <div
-        className="flex justify-between items-center px-5 py-3 rounded-b-lg"
+        className="flex justify-between items-center px-4 py-2.5 rounded-b-lg"
         style={{ background: 'hsl(var(--primary))' }}
       >
-        <span className="font-bold text-white text-base uppercase tracking-widest whitespace-nowrap">Grand Total</span>
-        <span className="font-bold text-white text-base whitespace-nowrap ml-8">MWK {formatCurrency(grandTotal)}</span>
+        <span className="font-bold text-white text-sm uppercase tracking-widest whitespace-nowrap">Grand Total</span>
+        <span className="font-bold text-white text-sm whitespace-nowrap ml-8">MWK {formatCurrency(grandTotal)}</span>
       </div>
     </div>
   );

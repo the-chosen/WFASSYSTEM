@@ -2,12 +2,12 @@ import { Phone, Mail, Globe, MapPin } from 'lucide-react';
 
 export function QuotationHeader() {
   return (
-    <div className="flex justify-between items-start mb-8">
+    <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-3">
         <img
           src="/wichi-logo.png"
           alt="Wichi Farms And Agro Solutions"
-          className="h-20 w-auto object-contain"
+          className="h-14 w-auto object-contain"
         />
       </div>
 

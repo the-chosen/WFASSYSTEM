@@ -81,9 +81,9 @@ export default function Preview() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-100 p-4 md:p-8"
+      className="min-h-screen bg-gray-100 p-4 md:p-6"
     >
-      <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center">
+      <div className="max-w-[210mm] mx-auto mb-4 flex justify-between items-center">
         <Button variant="ghost" onClick={() => setLocation('/')} className="text-foreground hover:bg-black/5">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Edit
         </Button>
@@ -98,83 +98,90 @@ export default function Preview() {
         </Button>
       </div>
 
+      {/* A4 document — compact padding to fit on one page */}
       <div
         ref={docRef}
-        className="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm]"
+        className="max-w-[210mm] mx-auto bg-white shadow-xl"
       >
-        <div className="p-10 md:p-14">
+        <div className="px-10 pt-7 pb-6">
+
+          {/* Header */}
           <QuotationHeader />
 
-          <div className="w-full h-1.5 bg-gradient-to-r from-primary via-primary/80 to-accent mb-8 rounded-full"></div>
+          {/* Divider */}
+          <div className="w-full h-1 bg-gradient-to-r from-primary via-primary/80 to-accent mb-4 rounded-full"></div>
 
-          <div className="flex justify-between items-start mb-10">
+          {/* QUOTATION title + dates */}
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <h2 className="text-4xl font-serif font-bold text-primary mb-2">QUOTATION</h2>
-              <p className="text-muted-foreground font-medium">#{data.quotationNumber}</p>
+              <h2 className="text-3xl font-serif font-bold text-primary leading-none mb-1">QUOTATION</h2>
+              <p className="text-muted-foreground text-xs font-medium">#{data.quotationNumber}</p>
             </div>
-            <div className="text-right text-sm space-y-1">
-              <div className="grid grid-cols-2 gap-x-4">
+            <div className="text-right text-xs space-y-0.5">
+              <div className="flex justify-end gap-3">
                 <span className="text-muted-foreground font-medium">Date:</span>
                 <span className="font-semibold text-foreground">{formatDate(data.date)}</span>
               </div>
-              <div className="grid grid-cols-2 gap-x-4">
+              <div className="flex justify-end gap-3">
                 <span className="text-muted-foreground font-medium">Valid Until:</span>
                 <span className="font-semibold text-foreground">{formatDate(data.validUntil)}</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-muted/10 p-6 rounded-lg border border-border/50 mb-10 text-sm">
-            <h3 className="font-bold text-primary mb-3 uppercase tracking-wider text-xs">Quotation For:</h3>
-            <div className="space-y-1 text-foreground">
-              {data.clientName && <p className="font-bold text-base">{data.clientName}</p>}
+          {/* Client block */}
+          <div className="bg-muted/10 px-4 py-3 rounded border border-border/50 mb-4 text-xs">
+            <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Quotation For:</h3>
+            <div className="space-y-0.5 text-foreground">
+              {data.clientName && <p className="font-bold text-sm">{data.clientName}</p>}
               {data.companyName && <p className="font-medium text-primary">{data.companyName}</p>}
               {data.address && <p>{data.address}</p>}
-              <div className="flex flex-wrap gap-x-4 mt-2">
+              <div className="flex flex-wrap gap-x-4 mt-1">
                 {data.email && <p className="text-muted-foreground"><span className="text-foreground/60 mr-1">E:</span>{data.email}</p>}
                 {data.phone && <p className="text-muted-foreground"><span className="text-foreground/60 mr-1">T:</span>{data.phone}</p>}
               </div>
             </div>
           </div>
 
-          <div className="mb-10">
+          {/* Line items */}
+          <div className="mb-4">
             <LineItemsTable items={data.items} onChange={() => {}} readOnly />
           </div>
 
-          <div className="flex justify-end mb-12">
-            <div className="w-full max-w-sm">
+          {/* Totals — right-aligned */}
+          <div className="flex justify-end mb-5">
+            <div className="w-full max-w-xs">
               <QuotationTotals data={data} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-8 text-sm text-muted-foreground border-t border-primary/20 pt-8">
+          {/* Footer: Terms + Signature */}
+          <div className="grid grid-cols-2 gap-6 text-xs text-muted-foreground border-t border-primary/20 pt-4">
             <div>
-              <h4 className="font-bold mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Terms &amp; Conditions</h4>
+              <h4 className="font-bold mb-1.5 uppercase tracking-wider text-[10px]" style={{ color: 'hsl(var(--primary))' }}>Terms &amp; Conditions</h4>
               <p className="whitespace-pre-wrap leading-relaxed">{data.notes}</p>
             </div>
             <div>
-              <h4 className="font-bold mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
-              <div className="mt-2 min-h-[72px] flex items-end">
+              <h4 className="font-bold mb-1.5 uppercase tracking-wider text-[10px]" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
+              <div className="mt-2 min-h-[52px] flex items-end">
                 {data.signatureImage ? (
-                  <img
-                    src={data.signatureImage}
-                    alt="Authorized Signature"
-                    className="max-h-16 max-w-[200px] object-contain"
-                  />
+                  <img src={data.signatureImage} alt="Authorized Signature" className="max-h-12 max-w-[180px] object-contain" />
                 ) : (
-                  <div className="w-52 border-b-2 border-foreground/40"></div>
+                  <div className="w-44 border-b-2 border-foreground/40"></div>
                 )}
               </div>
-              <div className="mt-3 border-t border-primary/20 pt-2 space-y-0.5">
-                <p className="font-semibold text-foreground">{data.preparedBy}</p>
-                <p className="text-xs text-muted-foreground">Authorized Signatory — Wichi Farms And Agro Solutions</p>
+              <div className="mt-2 border-t border-primary/20 pt-1.5 space-y-0.5">
+                <p className="font-semibold text-foreground text-xs">{data.preparedBy}</p>
+                <p className="text-[10px] text-muted-foreground">Authorized Signatory — Wichi Farms And Agro Solutions</p>
               </div>
             </div>
           </div>
 
-          <div className="mt-16 text-center text-xs text-muted-foreground/60 font-medium">
+          {/* Footer note */}
+          <div className="mt-4 text-center text-[10px] text-muted-foreground/60 font-medium">
             Thank you for choosing Wichi Farms And Agro Solutions.
           </div>
+
         </div>
       </div>
     </motion.div>
