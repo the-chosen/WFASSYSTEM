@@ -25,40 +25,44 @@ export default function Preview() {
     if (!docRef.current) return;
     setExporting(true);
     try {
-      const html2canvas = (await import('html2canvas')).default;
+      const { toPng } = await import('html-to-image');
       const { jsPDF } = await import('jspdf');
 
-      const canvas = await html2canvas(docRef.current, {
-        scale: 2,
-        useCORS: true,
+      const dataUrl = await toPng(docRef.current, {
+        quality: 1,
+        pixelRatio: 2,
         backgroundColor: '#ffffff',
-        logging: false,
+        style: { borderRadius: '0' },
       });
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.98);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = pdfWidth / imgWidth;
-      const scaledHeight = imgHeight * ratio;
+
+      const img = new Image();
+      img.src = dataUrl;
+      await new Promise(res => { img.onload = res; });
+
+      const ratio = pdfWidth / img.naturalWidth;
+      const scaledHeight = img.naturalHeight * ratio;
 
       let position = 0;
       let heightLeft = scaledHeight;
 
-      pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, scaledHeight);
       heightLeft -= pdfHeight;
 
       while (heightLeft > 0) {
         position -= pdfHeight;
         pdf.addPage();
-        pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledHeight);
+        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, scaledHeight);
         heightLeft -= pdfHeight;
       }
 
       pdf.save(`Quotation-${data.quotationNumber}.pdf`);
+    } catch (err) {
+      console.error('PDF generation failed:', err);
+      alert('PDF generation failed. Please try again.');
     } finally {
       setExporting(false);
     }
@@ -73,26 +77,34 @@ export default function Preview() {
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen bg-gray-100 p-4 md:p-8 no-print"
+      className="min-h-screen bg-gray-100 p-4 md:p-8"
     >
-      <div className="max-w-4xl mx-auto mb-6 flex justify-between items-center no-print">
+      <div className="max-w-[210mm] mx-auto mb-6 flex justify-between items-center">
         <Button variant="ghost" onClick={() => setLocation('/')} className="text-foreground hover:bg-black/5">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Edit
         </Button>
-        <Button onClick={handleSavePdf} disabled={exporting} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md">
+        <Button
+          onClick={handleSavePdf}
+          disabled={exporting}
+          data-testid="button-save-pdf"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+        >
           {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
           {exporting ? 'Generating PDF...' : 'Save as PDF'}
         </Button>
       </div>
 
-      <div ref={docRef} className="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm] print-document overflow-hidden">
+      <div
+        ref={docRef}
+        className="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm]"
+      >
         <div className="p-10 md:p-14">
           <QuotationHeader />
-          
+
           <div className="w-full h-1.5 bg-gradient-to-r from-primary via-primary/80 to-accent mb-8 rounded-full"></div>
 
           <div className="flex justify-between items-start mb-10">
@@ -130,20 +142,18 @@ export default function Preview() {
           </div>
 
           <div className="flex justify-end mb-12">
-            <div className="w-1/2 min-w-[300px]">
-              <div className="bg-muted/10 p-4 rounded-lg border border-border/50">
-                <QuotationTotals data={data} />
-              </div>
+            <div className="w-full max-w-sm">
+              <QuotationTotals data={data} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 text-sm text-muted-foreground border-t border-primary/20 pt-8">
             <div>
-              <h4 className="font-bold text-foreground mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Terms &amp; Conditions</h4>
+              <h4 className="font-bold mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Terms &amp; Conditions</h4>
               <p className="whitespace-pre-wrap leading-relaxed">{data.notes}</p>
             </div>
             <div>
-              <h4 className="font-bold text-foreground mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
+              <h4 className="font-bold mb-3 uppercase tracking-wider text-xs" style={{ color: 'hsl(var(--primary))' }}>Authorized Signature</h4>
               <div className="mt-2 min-h-[72px] flex items-end">
                 {data.signatureImage ? (
                   <img
@@ -161,7 +171,7 @@ export default function Preview() {
               </div>
             </div>
           </div>
-          
+
           <div className="mt-16 text-center text-xs text-muted-foreground/60 font-medium">
             Thank you for choosing Wichi Farms And Agro Solutions.
           </div>
