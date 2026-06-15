@@ -28,35 +28,57 @@ export default function Preview() {
       const { toPng } = await import('html-to-image');
       const { jsPDF } = await import('jspdf');
 
+      // A4 at 96 dpi = 794 × 1123 px. Fix the capture width so the image
+      // is always exactly A4-wide regardless of the browser viewport size.
+      const A4_PX = 794;
+      const contentHeight = docRef.current.scrollHeight;
+
       const dataUrl = await toPng(docRef.current, {
         quality: 1,
-        pixelRatio: 2,
+        pixelRatio: 2,          // 2× for crisp print quality
         backgroundColor: '#ffffff',
-        style: { borderRadius: '0' },
+        width: A4_PX,
+        height: contentHeight,
+        style: {
+          width: `${A4_PX}px`,
+          maxWidth: 'none',
+          boxShadow: 'none',
+          borderRadius: '0',
+        },
       });
 
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
+      // Load image to read actual rendered dimensions
       const img = new Image();
       img.src = dataUrl;
-      await new Promise(res => { img.onload = res; });
+      await new Promise<void>(res => { img.onload = () => res(); });
 
-      const ratio = pdfWidth / img.naturalWidth;
-      const scaledHeight = img.naturalHeight * ratio;
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdfW = pdf.internal.pageSize.getWidth();   // 210 mm
+      const pdfH = pdf.internal.pageSize.getHeight();  // 297 mm
 
-      let position = 0;
-      let heightLeft = scaledHeight;
+      // img dimensions are in pixels (at pixelRatio 2: naturalWidth = A4_PX * 2)
+      // Map pixel → mm using the A4 width anchor.
+      const mmPerPx = pdfW / img.naturalWidth;          // mm / px
+      const imgHeightMm = img.naturalHeight * mmPerPx;  // total content height in mm
 
-      pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, scaledHeight);
-      heightLeft -= pdfHeight;
+      // Slice the image across pages
+      let yOffset = 0; // how many mm of the image we've already printed
+      let pageIndex = 0;
+      while (yOffset < imgHeightMm) {
+        if (pageIndex > 0) pdf.addPage();
 
-      while (heightLeft > 0) {
-        position -= pdfHeight;
-        pdf.addPage();
-        pdf.addImage(dataUrl, 'PNG', 0, position, pdfWidth, scaledHeight);
-        heightLeft -= pdfHeight;
+        // Position the image so the next slice starts at the top of this page
+        pdf.addImage(
+          dataUrl,
+          'PNG',
+          0,                        // x = left edge
+          -(yOffset),               // y = negative to push already-printed portion above page top
+          pdfW,
+          imgHeightMm,
+        );
+
+        yOffset += pdfH;
+        pageIndex++;
       }
 
       pdf.save(`Quotation-${data.quotationNumber}.pdf`);
@@ -98,10 +120,11 @@ export default function Preview() {
         </Button>
       </div>
 
-      {/* A4 document — compact padding to fit on one page */}
+      {/* A4 document — fixed 794px (210mm at 96dpi) so PDF capture is always exact */}
       <div
         ref={docRef}
-        className="max-w-[210mm] mx-auto bg-white shadow-xl"
+        style={{ width: '794px' }}
+        className="mx-auto bg-white shadow-xl"
       >
         <div className="px-10 pt-7 pb-6">
 
