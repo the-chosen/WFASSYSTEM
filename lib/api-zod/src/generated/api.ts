@@ -159,3 +159,97 @@ export const DeleteQuotationParams = zod.object({
 })
 
 
+/**
+ * @summary List all inventory items
+ */
+export const ListInventoryItemsQueryParams = zod.object({
+  "activeOnly": zod.coerce.boolean().optional()
+})
+
+export const ListInventoryItemsResponseItem = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "isActive": zod.boolean().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+export const ListInventoryItemsResponse = zod.array(ListInventoryItemsResponseItem)
+
+
+/**
+ * @summary Create a new inventory item
+ */
+export const CreateInventoryItemBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "isActive": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Get an inventory item by ID
+ */
+export const GetInventoryItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetInventoryItemResponse = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "isActive": zod.boolean().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Update an inventory item
+ */
+export const UpdateInventoryItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateInventoryItemBody = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateInventoryItemResponse = zod.object({
+  "name": zod.string(),
+  "description": zod.string().optional(),
+  "category": zod.string().optional(),
+  "unit": zod.string().optional(),
+  "unitPrice": zod.number(),
+  "isActive": zod.boolean().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Delete an inventory item
+ */
+export const DeleteInventoryItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

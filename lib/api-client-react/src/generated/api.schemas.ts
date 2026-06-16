@@ -62,3 +62,22 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface InventoryItemPayload {
+  name: string;
+  description?: string;
+  category?: string;
+  unit?: string;
+  unitPrice: number;
+  isActive?: boolean;
+}
+
+export type InventoryItemRecord = InventoryItemPayload & {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ListInventoryItemsParams = {
+activeOnly?: boolean;
+};
+

@@ -8,7 +8,10 @@
 
 export * from './errorResponse';
 export * from './healthStatus';
+export * from './inventoryItemPayload';
+export * from './inventoryItemRecord';
 export * from './lineItem';
+export * from './listInventoryItemsParams';
 export * from './quotationPayload';
 export * from './quotationPayloadDiscountType';
 export * from './quotationRecord';

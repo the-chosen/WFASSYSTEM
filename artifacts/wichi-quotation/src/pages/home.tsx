@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useSearch } from 'wouter';
-import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2 } from 'lucide-react';
+import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2, Package } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useCreateQuotation, useUpdateQuotation, useGetQuotation } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
+import { InventoryPicker } from '@/components/inventory-picker';
 
 function generateNextNumber(current: string): string {
   const year = new Date().getFullYear();
@@ -38,6 +39,7 @@ export default function Home() {
   const [data, setData] = useState<QuotationData | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const { data: remoteQuotation, isLoading: loadingRemote } = useGetQuotation(
     loadId ?? 0,
@@ -165,9 +167,21 @@ export default function Home() {
     setLocation('/');
   };
 
+  const handleInventorySelect = (item: { name: string; unitPrice: number; unit: string }) => {
+    if (!data) return;
+    const newItem = {
+      id: crypto.randomUUID(),
+      description: item.name,
+      quantity: 1,
+      unitPrice: item.unitPrice,
+    };
+    handleChange('items', [...data.items, newItem]);
+  };
+
   const isSaving = saveStatus === 'saving';
 
   return (
+    <>
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -189,6 +203,9 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => setLocation('/history')}>
               <History className="w-4 h-4 mr-1" /> History
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setLocation('/inventory')}>
+              <Package className="w-4 h-4 mr-1" /> Inventory
             </Button>
             <Button
               variant="outline"
@@ -271,9 +288,14 @@ export default function Home() {
           </Card>
 
           <Card className="md:col-span-3 shadow-sm border-border">
-            <CardHeader className="bg-muted/20 border-b border-border pb-4">
-              <CardTitle className="text-lg">Line Items</CardTitle>
-              <CardDescription>All prices in Malawian Kwacha (MWK)</CardDescription>
+            <CardHeader className="bg-muted/20 border-b border-border pb-4 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Line Items</CardTitle>
+                <CardDescription>All prices in Malawian Kwacha (MWK)</CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="shrink-0">
+                <Package className="w-4 h-4 mr-1.5" /> Pick from Inventory
+              </Button>
             </CardHeader>
             <CardContent className="pt-6">
               <LineItemsTable items={data.items} onChange={items => handleChange('items', items)} />
@@ -377,5 +399,11 @@ export default function Home() {
         </div>
       </div>
     </motion.div>
+      <InventoryPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={handleInventorySelect}
+      />
+    </>
   );
 }
