@@ -16,11 +16,14 @@ router.get("/quotations", async (req, res) => {
     const rows = await db
       .select({
         id: quotationsTable.id,
+        documentType: quotationsTable.documentType,
         quotationNumber: quotationsTable.quotationNumber,
         clientName: quotationsTable.clientName,
         companyName: quotationsTable.companyName,
         date: quotationsTable.date,
         validUntil: quotationsTable.validUntil,
+        status: quotationsTable.status,
+        preparedBy: quotationsTable.preparedBy,
         createdAt: quotationsTable.createdAt,
       })
       .from(quotationsTable)
@@ -46,10 +49,12 @@ router.post("/quotations", async (req, res) => {
     return;
   }
   const body = parsed.data;
+  const userId = (req.session as any).userId ?? null;
   try {
     const [row] = await db
       .insert(quotationsTable)
       .values({
+        documentType: body.documentType ?? "quotation",
         quotationNumber: body.quotationNumber,
         date: body.date,
         validUntil: body.validUntil,
@@ -65,6 +70,8 @@ router.post("/quotations", async (req, res) => {
         notes: body.notes ?? "",
         preparedBy: body.preparedBy ?? "",
         signatureImage: body.signatureImage ?? "",
+        status: "draft",
+        submittedById: userId,
       })
       .returning();
 
@@ -77,16 +84,10 @@ router.post("/quotations", async (req, res) => {
 
 router.get("/quotations/:id", async (req, res) => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   try {
     const [row] = await db.select().from(quotationsTable).where(eq(quotationsTable.id, id));
-    if (!row) {
-      res.status(404).json({ error: "Not found" });
-      return;
-    }
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json(GetQuotationResponse.parse(toRecord(row)));
   } catch (err) {
     req.log.error({ err }, "Failed to get quotation");
@@ -96,20 +97,15 @@ router.get("/quotations/:id", async (req, res) => {
 
 router.put("/quotations/:id", async (req, res) => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const parsed = UpdateQuotationBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
-  }
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
   const body = parsed.data;
   try {
     const [row] = await db
       .update(quotationsTable)
       .set({
+        documentType: body.documentType ?? "quotation",
         quotationNumber: body.quotationNumber,
         date: body.date,
         validUntil: body.validUntil,
@@ -129,10 +125,7 @@ router.put("/quotations/:id", async (req, res) => {
       .where(eq(quotationsTable.id, id))
       .returning();
 
-    if (!row) {
-      res.status(404).json({ error: "Not found" });
-      return;
-    }
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json(UpdateQuotationResponse.parse(toRecord(row)));
   } catch (err) {
     req.log.error({ err }, "Failed to update quotation");
@@ -142,20 +135,10 @@ router.put("/quotations/:id", async (req, res) => {
 
 router.delete("/quotations/:id", async (req, res) => {
   const id = Number(req.params["id"]);
-  if (isNaN(id)) {
-    res.status(400).json({ error: "Invalid id" });
-    return;
-  }
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   try {
-    const [row] = await db
-      .delete(quotationsTable)
-      .where(eq(quotationsTable.id, id))
-      .returning({ id: quotationsTable.id });
-
-    if (!row) {
-      res.status(404).json({ error: "Not found" });
-      return;
-    }
+    const [row] = await db.delete(quotationsTable).where(eq(quotationsTable.id, id)).returning({ id: quotationsTable.id });
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete quotation");
@@ -163,9 +146,68 @@ router.delete("/quotations/:id", async (req, res) => {
   }
 });
 
+router.post("/quotations/:id/submit", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const userId = (req.session as any).userId ?? null;
+  try {
+    const [row] = await db.update(quotationsTable)
+      .set({ status: "pending", submittedById: userId })
+      .where(eq(quotationsTable.id, id))
+      .returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(GetQuotationResponse.parse(toRecord(row)));
+  } catch (err) {
+    req.log.error({ err }, "Failed to submit quotation");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/quotations/:id/approve", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const userId = (req.session as any).userId ?? null;
+  const role = (req.session as any).userRole ?? "";
+  if (role !== "admin" && role !== "super_admin") {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  try {
+    const [row] = await db.update(quotationsTable)
+      .set({ status: "approved", approvedById: userId, approvedAt: new Date() })
+      .where(eq(quotationsTable.id, id))
+      .returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(GetQuotationResponse.parse(toRecord(row)));
+  } catch (err) {
+    req.log.error({ err }, "Failed to approve quotation");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/quotations/:id/reject", async (req, res) => {
+  const id = Number(req.params["id"]);
+  const role = (req.session as any).userRole ?? "";
+  if (role !== "admin" && role !== "super_admin") {
+    res.status(403).json({ error: "Admin access required" });
+    return;
+  }
+  const { reason } = req.body ?? {};
+  try {
+    const [row] = await db.update(quotationsTable)
+      .set({ status: "rejected", rejectionReason: reason ?? "" })
+      .where(eq(quotationsTable.id, id))
+      .returning();
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    res.json(GetQuotationResponse.parse(toRecord(row)));
+  } catch (err) {
+    req.log.error({ err }, "Failed to reject quotation");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 function toRecord(row: typeof quotationsTable.$inferSelect) {
   return {
     id: row.id,
+    documentType: row.documentType,
     quotationNumber: row.quotationNumber,
     date: row.date,
     validUntil: row.validUntil,
@@ -181,6 +223,11 @@ function toRecord(row: typeof quotationsTable.$inferSelect) {
     notes: row.notes,
     preparedBy: row.preparedBy,
     signatureImage: row.signatureImage,
+    status: row.status,
+    submittedById: row.submittedById,
+    approvedById: row.approvedById,
+    approvedAt: row.approvedAt?.toISOString() ?? null,
+    rejectionReason: row.rejectionReason,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

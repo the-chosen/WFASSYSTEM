@@ -9,6 +9,76 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface LoginBody {
+  username: string;
+  password: string;
+}
+
+export interface UpdateProfileBody {
+  displayName?: string;
+  signatureImage?: string;
+  email?: string;
+}
+
+export interface ChangePasswordBody {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserProfile {
+  id: number;
+  username: string;
+  email?: string;
+  role: string;
+  displayName: string;
+  signatureImage?: string;
+}
+
+export interface UserRecord {
+  id: number;
+  username: string;
+  email?: string;
+  role: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export type CreateUserBodyRole = typeof CreateUserBodyRole[keyof typeof CreateUserBodyRole];
+
+
+export const CreateUserBodyRole = {
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
+} as const;
+
+export interface CreateUserBody {
+  username: string;
+  email?: string;
+  password: string;
+  role?: CreateUserBodyRole;
+  displayName: string;
+}
+
+export type UpdateUserBodyRole = typeof UpdateUserBodyRole[keyof typeof UpdateUserBodyRole];
+
+
+export const UpdateUserBodyRole = {
+  user: 'user',
+  admin: 'admin',
+  super_admin: 'super_admin',
+} as const;
+
+export interface UpdateUserBody {
+  role?: UpdateUserBodyRole;
+  displayName?: string;
+  email?: string;
+}
+
+export interface RejectBody {
+  reason: string;
+}
+
 export interface LineItem {
   id: string;
   description: string;
@@ -56,6 +126,11 @@ export interface QuotationPayload {
 
 export type QuotationRecord = QuotationPayload & {
   id: number;
+  status: string;
+  submittedById?: number;
+  approvedById?: number;
+  approvedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -68,6 +143,8 @@ export interface QuotationSummary {
   companyName?: string;
   date: string;
   validUntil?: string;
+  status: string;
+  preparedBy?: string;
   createdAt: string;
 }
 
@@ -135,6 +212,14 @@ export interface FollowUpPayload {
 export type FollowUpRecord = FollowUpPayload & {
   id: number;
   createdAt: string;
+};
+
+export type Logout200 = {
+  ok: boolean;
+};
+
+export type ChangePassword200 = {
+  ok: boolean;
 };
 
 export type ListInventoryItemsParams = {

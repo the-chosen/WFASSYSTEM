@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'wouter';
-import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { useLocation, useSearch } from 'wouter';
+import { ArrowLeft, Download, Loader2, Clock, XCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { QuotationHeader } from '@/components/quotation-header';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
 import { loadQuotationData, QuotationData, DOCUMENT_TYPE_LABELS } from '@/lib/quotation-store';
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '@/contexts/auth';
+import { useGetQuotation } from '@workspace/api-client-react';
 
 const DOC_CLIENT_LABEL: Record<string, string> = {
   quotation: 'Quotation For',
@@ -27,9 +29,18 @@ const DOC_DATE2_LABEL: Record<string, string> = {
 
 export default function Preview() {
   const [, setLocation] = useLocation();
+  const searchStr = useSearch();
   const [data, setData] = useState<QuotationData | null>(null);
   const [exporting, setExporting] = useState(false);
   const docRef = useRef<HTMLDivElement>(null);
+  const { isAdmin } = useAuth();
+
+  const params = new URLSearchParams(searchStr);
+  const savedId = params.get('id') ? Number(params.get('id')) : null;
+
+  const { data: remoteQ } = useGetQuotation(savedId ?? 0, { query: { enabled: savedId !== null, queryKey: ['getQuotation', savedId] } });
+  const docStatus: string = (remoteQ as any)?.status ?? 'draft';
+  const rejectionReason: string = (remoteQ as any)?.rejectionReason ?? '';
 
   useEffect(() => {
     setData(loadQuotationData());
@@ -42,8 +53,11 @@ export default function Preview() {
   const clientLabel = DOC_CLIENT_LABEL[docType] ?? 'For';
   const date2Label = DOC_DATE2_LABEL[docType] ?? 'Valid Until';
 
+  // PDF download is allowed only for approved docs or admins (or no saved id = local draft)
+  const canDownload = isAdmin || !savedId || docStatus === 'approved';
+
   const handleSavePdf = async () => {
-    if (!docRef.current) return;
+    if (!docRef.current || !canDownload) return;
     setExporting(true);
     try {
       const { toPng } = await import('html-to-image');
@@ -114,15 +128,35 @@ export default function Preview() {
         <Button variant="ghost" onClick={() => setLocation('/')} className="text-foreground hover:bg-black/5">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Edit
         </Button>
-        <Button
-          onClick={handleSavePdf}
-          disabled={exporting}
-          data-testid="button-save-pdf"
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
-        >
-          {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-          {exporting ? 'Generating PDF...' : `Save as PDF`}
-        </Button>
+        <div className="flex items-center gap-3">
+          {savedId && docStatus === 'pending' && (
+            <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-3 py-1.5 rounded-lg">
+              <Clock className="w-4 h-4" />
+              <span>Awaiting admin approval before PDF download</span>
+            </div>
+          )}
+          {savedId && docStatus === 'rejected' && (
+            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-800 text-sm px-3 py-1.5 rounded-lg">
+              <XCircle className="w-4 h-4" />
+              <span>{rejectionReason ? `Rejected: ${rejectionReason}` : 'Document rejected'}</span>
+            </div>
+          )}
+          {canDownload ? (
+            <Button
+              onClick={handleSavePdf}
+              disabled={exporting}
+              data-testid="button-save-pdf"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+            >
+              {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              {exporting ? 'Generating PDF...' : `Save as PDF`}
+            </Button>
+          ) : (
+            <Button disabled className="bg-muted text-muted-foreground cursor-not-allowed">
+              <Lock className="w-4 h-4 mr-2" /> PDF Locked
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* A4 document */}

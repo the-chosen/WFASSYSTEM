@@ -10,6 +10,10 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication and user profile
+  - name: users
+    description: User management (admin)
   - name: quotations
     description: Quotation management
   - name: inventory
@@ -29,6 +33,209 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/profile:
+    put:
+      operationId: updateProfile
+      tags: [auth]
+      summary: Update current user display name and signature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/change-password:
+    put:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change current user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordBody"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required: [ok]
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List all users (admin only)
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserRecord"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a user (super_admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRecord"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/{id}:
+    put:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a user's role or details (super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a user (super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /quotations:
     get:
@@ -136,6 +343,87 @@ paths:
           description: Deleted
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /quotations/{id}/submit:
+    post:
+      operationId: submitQuotation
+      tags: [quotations]
+      summary: Submit a quotation for approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quotation submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /quotations/{id}/approve:
+    post:
+      operationId: approveQuotation
+      tags: [quotations]
+      summary: Approve a quotation (admin/super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Quotation approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /quotations/{id}/reject:
+    post:
+      operationId: rejectQuotation
+      tags: [quotations]
+      summary: Reject a quotation (admin/super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RejectBody"
+      responses:
+        "200":
+          description: Quotation rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuotationRecord"
+        "403":
+          description: Forbidden
           content:
             application/json:
               schema:
@@ -488,6 +776,102 @@ components:
           type: string
       required: [status]
 
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        signatureImage:
+          type: string
+        email:
+          type: string
+
+    ChangePasswordBody:
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+      required: [currentPassword, newPassword]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        displayName:
+          type: string
+        signatureImage:
+          type: string
+      required: [id, username, role, displayName]
+
+    UserRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        displayName:
+          type: string
+        createdAt:
+          type: string
+      required: [id, username, role, displayName, createdAt]
+
+    CreateUserBody:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        displayName:
+          type: string
+      required: [username, password, displayName]
+
+    UpdateUserBody:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin, super_admin]
+        displayName:
+          type: string
+        email:
+          type: string
+
+    RejectBody:
+      type: object
+      properties:
+        reason:
+          type: string
+      required: [reason]
+
     LineItem:
       type: object
       properties:
@@ -557,11 +941,21 @@ components:
           properties:
             id:
               type: integer
+            status:
+              type: string
+            submittedById:
+              type: integer
+            approvedById:
+              type: integer
+            approvedAt:
+              type: string
+            rejectionReason:
+              type: string
             createdAt:
               type: string
             updatedAt:
               type: string
-          required: [id, createdAt, updatedAt]
+          required: [id, status, createdAt, updatedAt]
 
     QuotationSummary:
       type: object
@@ -580,9 +974,13 @@ components:
           type: string
         validUntil:
           type: string
+        status:
+          type: string
+        preparedBy:
+          type: string
         createdAt:
           type: string
-      required: [id, quotationNumber, clientName, date, createdAt]
+      required: [id, quotationNumber, clientName, date, createdAt, status]
 
     ErrorResponse:
       type: object

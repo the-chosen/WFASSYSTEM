@@ -1,0 +1,2 @@
+- [Orval codegen index collision fix](orval-index-fix.md) — removing `schemas` from orval zod config still generates a broken index.ts; fix by patching via codegen script.
+- [Session auth pattern](session-auth.md) — express-session + connect-pg-simple + bcryptjs; userRole stored in session to avoid extra DB lookups.

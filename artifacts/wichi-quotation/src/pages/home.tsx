@@ -1,21 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useSearch } from 'wouter';
-import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2, Package, Users } from 'lucide-react';
+import {
+  FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2,
+  CheckCircle2, Package, Users, LogOut, User as UserIcon, Shield, Send, Clock,
+  XCircle, AlertTriangle,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
-import { loadQuotationData, saveQuotationData, defaultQuotationData, QuotationData, DOCUMENT_TYPE_LABELS, DOCUMENT_TYPE_PREFIX, DocumentType } from '@/lib/quotation-store';
+import {
+  loadQuotationData, saveQuotationData, defaultQuotationData,
+  QuotationData, DOCUMENT_TYPE_LABELS, DOCUMENT_TYPE_PREFIX, DocumentType,
+} from '@/lib/quotation-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useCreateQuotation, useUpdateQuotation, useGetQuotation } from '@workspace/api-client-react';
+import { useCreateQuotation, useUpdateQuotation, useGetQuotation, useSubmitQuotation } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { InventoryPicker } from '@/components/inventory-picker';
+import { useAuth } from '@/contexts/auth';
 
 function generateNextNumber(current: string, docType: DocumentType = 'quotation'): string {
   const year = new Date().getFullYear();
@@ -28,23 +37,31 @@ function generateNextNumber(current: string, docType: DocumentType = 'quotation'
   return `${prefix}-${year}-001`;
 }
 
+const STATUS_STYLES: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
+  draft: { label: 'Draft', icon: <FileText className="w-3.5 h-3.5" />, cls: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Pending Approval', icon: <Clock className="w-3.5 h-3.5" />, cls: 'bg-yellow-100 text-yellow-800' },
+  approved: { label: 'Approved', icon: <CheckCircle2 className="w-3.5 h-3.5" />, cls: 'bg-green-100 text-green-800' },
+  rejected: { label: 'Rejected', icon: <XCircle className="w-3.5 h-3.5" />, cls: 'bg-red-100 text-red-800' },
+};
+
 export default function Home() {
   const [, setLocation] = useLocation();
   const searchStr = useSearch();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { user, logout, isAdmin } = useAuth();
 
   const params = new URLSearchParams(searchStr);
   const loadId = params.get('load') ? Number(params.get('load')) : null;
 
   const [data, setData] = useState<QuotationData | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const [docStatus, setDocStatus] = useState<string>('draft');
+  const [rejectionReason, setRejectionReason] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const { data: remoteQuotation, isLoading: loadingRemote } = useGetQuotation(
-    loadId ?? 0,
-  );
+  const { data: remoteQuotation, isLoading: loadingRemote } = useGetQuotation(loadId ?? 0);
 
   useEffect(() => {
     if (remoteQuotation && loadId) {
@@ -69,15 +86,34 @@ export default function Home() {
       };
       setData(mapped);
       setSavedId(loadId);
+      setDocStatus((q as any).status ?? 'draft');
+      setRejectionReason((q as any).rejectionReason ?? '');
       saveQuotationData(mapped);
     }
   }, [remoteQuotation, loadId]);
 
   useEffect(() => {
     if (!loadId) {
-      setData(loadQuotationData());
+      const stored = loadQuotationData();
+      // Auto-fill preparedBy and signature from user profile if blank
+      if (user) {
+        if (!stored.preparedBy && user.displayName) stored.preparedBy = user.displayName;
+        if (!stored.signatureImage && user.signatureImage) stored.signatureImage = user.signatureImage;
+      }
+      setData(stored);
     }
   }, [loadId]);
+
+  // Fill from user profile when user first loads
+  useEffect(() => {
+    if (user && data && !loadId) {
+      let updated = false;
+      const patch: Partial<QuotationData> = {};
+      if (!data.preparedBy && user.displayName) { patch.preparedBy = user.displayName; updated = true; }
+      if (!data.signatureImage && user.signatureImage) { patch.signatureImage = user.signatureImage; updated = true; }
+      if (updated) setData(d => d ? { ...d, ...patch } : d);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!data || loadId) return;
@@ -89,9 +125,10 @@ export default function Home() {
     mutation: {
       onSuccess: (result) => {
         setSavedId(result.id);
+        setDocStatus((result as any).status ?? 'draft');
         setSaveStatus('saved');
         queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
-        toast({ title: 'Quotation saved', description: `Saved as ${result.quotationNumber}` });
+        toast({ title: 'Document saved', description: `Saved as ${result.quotationNumber}` });
         setTimeout(() => setSaveStatus('idle'), 3000);
       },
       onError: () => {
@@ -106,12 +143,25 @@ export default function Home() {
       onSuccess: (result) => {
         setSaveStatus('saved');
         queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
-        toast({ title: 'Quotation updated', description: `Updated ${result.quotationNumber}` });
+        toast({ title: 'Document updated', description: `Updated ${result.quotationNumber}` });
         setTimeout(() => setSaveStatus('idle'), 3000);
       },
       onError: () => {
         setSaveStatus('idle');
-        toast({ title: 'Update failed', description: 'Could not update the quotation.', variant: 'destructive' });
+        toast({ title: 'Update failed', description: 'Could not update the document.', variant: 'destructive' });
+      },
+    },
+  });
+
+  const submitMutation = useSubmitQuotation({
+    mutation: {
+      onSuccess: () => {
+        setDocStatus('pending');
+        queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
+        toast({ title: 'Submitted for approval', description: 'An admin will review and approve this document.' });
+      },
+      onError: () => {
+        toast({ title: 'Submission failed', variant: 'destructive' });
       },
     },
   });
@@ -128,31 +178,41 @@ export default function Home() {
     setData(prev => prev ? { ...prev, [field]: value } : prev);
   };
 
+  const buildPayload = () => ({
+    documentType: data.documentType ?? 'quotation',
+    quotationNumber: data.quotationNumber,
+    date: data.date,
+    validUntil: data.validUntil,
+    clientName: data.clientName,
+    companyName: data.companyName,
+    address: data.address,
+    email: data.email,
+    phone: data.phone,
+    items: data.items,
+    discountType: data.discountType,
+    discountValue: data.discountValue,
+    applyTax: data.applyTax,
+    notes: data.notes,
+    preparedBy: data.preparedBy,
+    signatureImage: data.signatureImage,
+  });
+
   const handleSaveToDb = () => {
     if (!data) return;
     setSaveStatus('saving');
-    const payload = {
-      quotationNumber: data.quotationNumber,
-      date: data.date,
-      validUntil: data.validUntil,
-      clientName: data.clientName,
-      companyName: data.companyName,
-      address: data.address,
-      email: data.email,
-      phone: data.phone,
-      items: data.items,
-      discountType: data.discountType,
-      discountValue: data.discountValue,
-      applyTax: data.applyTax,
-      notes: data.notes,
-      preparedBy: data.preparedBy,
-      signatureImage: data.signatureImage,
-    };
     if (savedId) {
-      updateMutation.mutate({ id: savedId, data: payload });
+      updateMutation.mutate({ id: savedId, data: buildPayload() });
     } else {
-      createMutation.mutate({ data: payload });
+      createMutation.mutate({ data: buildPayload() });
     }
+  };
+
+  const handleSubmitForApproval = () => {
+    if (!savedId) {
+      toast({ title: 'Save first', description: 'Save the document before submitting for approval.', variant: 'destructive' });
+      return;
+    }
+    submitMutation.mutate({ id: savedId });
   };
 
   const handleNew = () => {
@@ -161,9 +221,12 @@ export default function Home() {
       quotationNumber: generateNextNumber(data.quotationNumber),
       date: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      preparedBy: user?.displayName ?? '',
+      signatureImage: user?.signatureImage ?? '',
     };
     setData(newData);
     setSavedId(null);
+    setDocStatus('draft');
     setSaveStatus('idle');
     saveQuotationData(newData);
     setLocation('/');
@@ -181,6 +244,7 @@ export default function Home() {
   };
 
   const isSaving = saveStatus === 'saving';
+  const statusInfo = STATUS_STYLES[docStatus] ?? STATUS_STYLES['draft'];
 
   return (
     <>
@@ -197,7 +261,14 @@ export default function Home() {
               <FileText className="w-8 h-8 text-accent" />
               WICHI System
             </h1>
-            <p className="text-muted-foreground mt-1">Wichi Farms And Agro Solutions — Document Management</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-muted-foreground">Wichi Farms And Agro Solutions</p>
+              {savedId && (
+                <Badge className={`text-xs flex items-center gap-1 ${statusInfo.cls}`}>
+                  {statusInfo.icon} {statusInfo.label}
+                </Badge>
+              )}
+            </div>
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" size="sm" onClick={handleNew}>
@@ -212,6 +283,11 @@ export default function Home() {
             <Button variant="outline" size="sm" onClick={() => setLocation('/leads')}>
               <Users className="w-4 h-4 mr-1" /> Leads
             </Button>
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={() => setLocation('/admin')}>
+                <Shield className="w-4 h-4 mr-1" /> Admin
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -227,11 +303,45 @@ export default function Home() {
               )}
               {savedId ? 'Update' : 'Save'}
             </Button>
+            {savedId && docStatus === 'draft' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSubmitForApproval}
+                disabled={submitMutation.isPending}
+                className="text-yellow-700 border-yellow-300 hover:bg-yellow-50"
+              >
+                {submitMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 mr-1" />
+                )}
+                Submit
+              </Button>
+            )}
             <Button onClick={() => setLocation('/preview')} className="bg-primary hover:bg-primary/90 text-primary-foreground" size="sm">
-              <FileCheck className="w-4 h-4 mr-1" /> Preview & Print
+              <FileCheck className="w-4 h-4 mr-1" /> Preview
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setLocation('/profile')} title={user?.displayName ?? 'Profile'}>
+              <UserIcon className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => { logout(); setLocation('/login'); }} className="text-muted-foreground" title="Sign out">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
+
+        {/* Rejection banner */}
+        {docStatus === 'rejected' && rejectionReason && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-800">
+            <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-red-500" />
+            <div>
+              <p className="font-semibold">Document Rejected</p>
+              <p className="text-red-700">{rejectionReason}</p>
+              <p className="text-xs mt-1 text-red-600">Make corrections and save, then re-submit for approval.</p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="md:col-span-2 shadow-sm border-border">
@@ -376,6 +486,11 @@ export default function Home() {
               <div className="space-y-2">
                 <Label htmlFor="preparedBy">Prepared By</Label>
                 <Input id="preparedBy" value={data.preparedBy} onChange={e => handleChange('preparedBy', e.target.value)} placeholder="Sales Representative Name" />
+                {user && !data.preparedBy && (
+                  <button type="button" className="text-xs text-primary underline" onClick={() => handleChange('preparedBy', user.displayName)}>
+                    Use my name ({user.displayName})
+                  </button>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Authorized Signature</Label>
@@ -409,6 +524,11 @@ export default function Home() {
                     reader.readAsDataURL(file);
                   }}
                 />
+                {user?.signatureImage && !data.signatureImage && (
+                  <button type="button" className="text-xs text-primary underline" onClick={() => handleChange('signatureImage', user.signatureImage)}>
+                    Use my saved signature
+                  </button>
+                )}
                 {data.signatureImage && (
                   <Button
                     variant="ghost"

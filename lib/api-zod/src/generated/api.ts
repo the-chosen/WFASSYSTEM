@@ -17,6 +17,134 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Login with username and password
+ */
+export const LoginBody = zod.object({
+  "username": zod.string(),
+  "password": zod.string()
+})
+
+export const LoginResponse = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "role": zod.string(),
+  "displayName": zod.string(),
+  "signatureImage": zod.string().optional()
+})
+
+
+/**
+ * @summary Log out
+ */
+export const LogoutResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary Get current user profile
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "role": zod.string(),
+  "displayName": zod.string(),
+  "signatureImage": zod.string().optional()
+})
+
+
+/**
+ * @summary Update current user display name and signature
+ */
+export const UpdateProfileBody = zod.object({
+  "displayName": zod.string().optional(),
+  "signatureImage": zod.string().optional(),
+  "email": zod.string().optional()
+})
+
+export const UpdateProfileResponse = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "role": zod.string(),
+  "displayName": zod.string(),
+  "signatureImage": zod.string().optional()
+})
+
+
+/**
+ * @summary Change current user password
+ */
+export const ChangePasswordBody = zod.object({
+  "currentPassword": zod.string(),
+  "newPassword": zod.string()
+})
+
+export const ChangePasswordResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary List all users (admin only)
+ */
+export const ListUsersResponseItem = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "role": zod.string(),
+  "displayName": zod.string(),
+  "createdAt": zod.string()
+})
+export const ListUsersResponse = zod.array(ListUsersResponseItem)
+
+
+/**
+ * @summary Create a user (super_admin only)
+ */
+export const CreateUserBody = zod.object({
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "password": zod.string(),
+  "role": zod.enum(['user', 'admin', 'super_admin']).optional(),
+  "displayName": zod.string()
+})
+
+
+/**
+ * @summary Update a user's role or details (super_admin only)
+ */
+export const UpdateUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateUserBody = zod.object({
+  "role": zod.enum(['user', 'admin', 'super_admin']).optional(),
+  "displayName": zod.string().optional(),
+  "email": zod.string().optional()
+})
+
+export const UpdateUserResponse = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "email": zod.string().optional(),
+  "role": zod.string(),
+  "displayName": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Delete a user (super_admin only)
+ */
+export const DeleteUserParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all saved quotations
  */
 export const ListQuotationsResponseItem = zod.object({
@@ -27,6 +155,8 @@ export const ListQuotationsResponseItem = zod.object({
   "companyName": zod.string().optional(),
   "date": zod.string(),
   "validUntil": zod.string().optional(),
+  "status": zod.string(),
+  "preparedBy": zod.string().optional(),
   "createdAt": zod.string()
 })
 export const ListQuotationsResponse = zod.array(ListQuotationsResponseItem)
@@ -91,6 +221,11 @@ export const GetQuotationResponse = zod.object({
   "signatureImage": zod.string().optional()
 }).and(zod.object({
   "id": zod.number(),
+  "status": zod.string(),
+  "submittedById": zod.number().optional(),
+  "approvedById": zod.number().optional(),
+  "approvedAt": zod.string().optional(),
+  "rejectionReason": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 }))
@@ -151,6 +286,11 @@ export const UpdateQuotationResponse = zod.object({
   "signatureImage": zod.string().optional()
 }).and(zod.object({
   "id": zod.number(),
+  "status": zod.string(),
+  "submittedById": zod.number().optional(),
+  "approvedById": zod.number().optional(),
+  "approvedAt": zod.string().optional(),
+  "rejectionReason": zod.string().optional(),
   "createdAt": zod.string(),
   "updatedAt": zod.string()
 }))
@@ -162,6 +302,133 @@ export const UpdateQuotationResponse = zod.object({
 export const DeleteQuotationParams = zod.object({
   "id": zod.coerce.number()
 })
+
+
+/**
+ * @summary Submit a quotation for approval
+ */
+export const SubmitQuotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SubmitQuotationResponse = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
+  "quotationNumber": zod.string(),
+  "date": zod.string(),
+  "validUntil": zod.string(),
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "address": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number()
+})),
+  "discountType": zod.enum(['fixed', 'percentage']),
+  "discountValue": zod.number(),
+  "applyTax": zod.boolean(),
+  "notes": zod.string().optional(),
+  "preparedBy": zod.string().optional(),
+  "signatureImage": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "submittedById": zod.number().optional(),
+  "approvedById": zod.number().optional(),
+  "approvedAt": zod.string().optional(),
+  "rejectionReason": zod.string().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Approve a quotation (admin/super_admin only)
+ */
+export const ApproveQuotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ApproveQuotationResponse = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
+  "quotationNumber": zod.string(),
+  "date": zod.string(),
+  "validUntil": zod.string(),
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "address": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number()
+})),
+  "discountType": zod.enum(['fixed', 'percentage']),
+  "discountValue": zod.number(),
+  "applyTax": zod.boolean(),
+  "notes": zod.string().optional(),
+  "preparedBy": zod.string().optional(),
+  "signatureImage": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "submittedById": zod.number().optional(),
+  "approvedById": zod.number().optional(),
+  "approvedAt": zod.string().optional(),
+  "rejectionReason": zod.string().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Reject a quotation (admin/super_admin only)
+ */
+export const RejectQuotationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RejectQuotationBody = zod.object({
+  "reason": zod.string()
+})
+
+export const RejectQuotationResponse = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
+  "quotationNumber": zod.string(),
+  "date": zod.string(),
+  "validUntil": zod.string(),
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "address": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "description": zod.string(),
+  "quantity": zod.number(),
+  "unitPrice": zod.number()
+})),
+  "discountType": zod.enum(['fixed', 'percentage']),
+  "discountValue": zod.number(),
+  "applyTax": zod.boolean(),
+  "notes": zod.string().optional(),
+  "preparedBy": zod.string().optional(),
+  "signatureImage": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "status": zod.string(),
+  "submittedById": zod.number().optional(),
+  "approvedById": zod.number().optional(),
+  "approvedAt": zod.string().optional(),
+  "rejectionReason": zod.string().optional(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
 
 
 /**

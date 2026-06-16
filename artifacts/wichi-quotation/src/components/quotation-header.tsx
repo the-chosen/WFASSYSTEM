@@ -1,6 +1,15 @@
 import { Phone, Mail, Globe, MapPin } from 'lucide-react';
 
-export function QuotationHeader() {
+export function QuotationHeader({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <img src="/wichi-logo.png" alt="Wichi Farms And Agro Solutions" className="h-16 w-auto object-contain" />
+        <p className="text-primary font-bold text-sm uppercase tracking-widest">Wichi Farms And Agro Solutions</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex justify-between items-start mb-3">
       <div className="flex items-center gap-3">

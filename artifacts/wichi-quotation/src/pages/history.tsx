@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useLocation } from 'wouter';
-import { FileText, FolderOpen, Trash2, Plus, ArrowLeft, Loader2, Clock } from 'lucide-react';
+import { FileText, FolderOpen, Trash2, Plus, ArrowLeft, Loader2, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -19,6 +20,21 @@ import { useListQuotations, useDeleteQuotation } from '@workspace/api-client-rea
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 
+const STATUS_STYLES: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
+  draft: { label: 'Draft', icon: <FileText className="w-3 h-3" />, cls: 'bg-gray-100 text-gray-600' },
+  pending: { label: 'Pending', icon: <Clock className="w-3 h-3" />, cls: 'bg-yellow-100 text-yellow-800' },
+  approved: { label: 'Approved', icon: <CheckCircle2 className="w-3 h-3" />, cls: 'bg-green-100 text-green-800' },
+  rejected: { label: 'Rejected', icon: <XCircle className="w-3 h-3" />, cls: 'bg-red-100 text-red-800' },
+};
+
+const DOC_TYPE_LABEL: Record<string, string> = {
+  quotation: 'Quotation',
+  invoice: 'Invoice',
+  receipt: 'Receipt',
+  delivery_note: 'Delivery Note',
+  sale_order: 'Sale Order',
+};
+
 export default function History() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -30,27 +46,20 @@ export default function History() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['listQuotations'] });
-        toast({ title: 'Quotation deleted', description: 'The quotation has been removed.' });
+        toast({ title: 'Document deleted', description: 'The document has been removed.' });
       },
       onError: () => {
-        toast({ title: 'Delete failed', description: 'Could not delete the quotation.', variant: 'destructive' });
+        toast({ title: 'Delete failed', description: 'Could not delete the document.', variant: 'destructive' });
       },
     },
   });
 
-  const handleLoad = (id: number) => {
-    setLocation(`/?load=${id}`);
-  };
-
-  const handleDelete = (id: number) => {
-    deleteMutation.mutate({ id });
-  };
+  const handleLoad = (id: number) => setLocation(`/?load=${id}`);
+  const handleDelete = (id: number) => deleteMutation.mutate({ id });
 
   const formatDate = (dateStr: string) => {
     try {
-      return new Date(dateStr).toLocaleDateString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      });
+      return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     } catch {
       return dateStr;
     }
@@ -68,16 +77,16 @@ export default function History() {
           <div>
             <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
               <Clock className="w-8 h-8 text-accent" />
-              Quotation History
+              Document History
             </h1>
-            <p className="text-muted-foreground mt-1">All saved quotations for Wichi Farms.</p>
+            <p className="text-muted-foreground mt-1">All saved documents for Wichi Farms.</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setLocation('/')}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Back to Builder
             </Button>
             <Button size="sm" className="bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setLocation('/')}>
-              <Plus className="w-4 h-4 mr-1" /> New Quotation
+              <Plus className="w-4 h-4 mr-1" /> New Document
             </Button>
           </div>
         </div>
@@ -91,7 +100,7 @@ export default function History() {
         {isError && (
           <Card className="border-destructive/30 bg-destructive/5">
             <CardContent className="pt-6 text-center text-destructive">
-              Failed to load quotations. Please try again.
+              Failed to load documents. Please try again.
             </CardContent>
           </Card>
         )}
@@ -100,10 +109,10 @@ export default function History() {
           <Card className="shadow-sm border-border">
             <CardContent className="pt-12 pb-12 text-center space-y-4">
               <FileText className="w-12 h-12 mx-auto text-muted-foreground/40" />
-              <p className="text-muted-foreground text-lg">No saved quotations yet.</p>
-              <p className="text-muted-foreground/60 text-sm">Build a quotation and click "Save" to store it here.</p>
+              <p className="text-muted-foreground text-lg">No saved documents yet.</p>
+              <p className="text-muted-foreground/60 text-sm">Build a document and click "Save" to store it here.</p>
               <Button onClick={() => setLocation('/')} className="bg-primary hover:bg-primary/90 text-primary-foreground mt-2">
-                <Plus className="w-4 h-4 mr-2" /> Create First Quotation
+                <Plus className="w-4 h-4 mr-2" /> Create First Document
               </Button>
             </CardContent>
           </Card>
@@ -113,69 +122,74 @@ export default function History() {
           <Card className="shadow-sm border-border">
             <CardHeader className="bg-muted/20 border-b border-border pb-4">
               <CardTitle className="text-lg">
-                {quotations.length} saved quotation{quotations.length !== 1 ? 's' : ''}
+                {quotations.length} document{quotations.length !== 1 ? 's' : ''}
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0 divide-y divide-border">
-              {[...quotations].reverse().map((q) => (
-                <div key={q.id} className="flex items-center justify-between py-4 gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-primary font-mono text-sm">{q.quotationNumber}</span>
-                      {q.clientName && (
-                        <span className="text-sm text-foreground">— {q.clientName}</span>
-                      )}
-                      {q.companyName && (
-                        <span className="text-sm text-muted-foreground">({q.companyName})</span>
-                      )}
+              {[...quotations].reverse().map((q) => {
+                const status = (q as any).status ?? 'draft';
+                const statusInfo = STATUS_STYLES[status] ?? STATUS_STYLES['draft'];
+                const docType = (q as any).documentType ?? 'quotation';
+                return (
+                  <div key={q.id} className="flex items-center justify-between py-4 gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-primary font-mono text-sm">{q.quotationNumber}</span>
+                        {q.clientName && (
+                          <span className="text-sm text-foreground">— {q.clientName}</span>
+                        )}
+                        {q.companyName && (
+                          <span className="text-sm text-muted-foreground">({q.companyName})</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
+                        <span className="text-foreground/70 font-medium">{DOC_TYPE_LABEL[docType] ?? docType}</span>
+                        <span>Date: {q.date}</span>
+                        {q.validUntil && <span>Valid: {q.validUntil}</span>}
+                        <span className="text-muted-foreground/60">Saved: {formatDate(q.createdAt)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
-                      <span>Date: {q.date}</span>
-                      {q.validUntil && <span>Valid: {q.validUntil}</span>}
-                      <span className="text-muted-foreground/60">Saved: {formatDate(q.createdAt)}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleLoad(q.id)}
-                    >
-                      <FolderOpen className="w-3.5 h-3.5 mr-1" /> Load
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete quotation?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete <strong>{q.quotationNumber}</strong>
-                            {q.clientName ? ` for ${q.clientName}` : ''}. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            onClick={() => handleDelete(q.id)}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge className={`text-xs flex items-center gap-1 ${statusInfo.cls}`}>
+                        {statusInfo.icon} {statusInfo.label}
+                      </Badge>
+                      <Button variant="outline" size="sm" onClick={() => handleLoad(q.id)}>
+                        <FolderOpen className="w-3.5 h-3.5 mr-1" /> Load
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            disabled={deleteMutation.isPending}
                           >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete document?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete <strong>{q.quotationNumber}</strong>
+                              {q.clientName ? ` for ${q.clientName}` : ''}. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(q.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         )}
