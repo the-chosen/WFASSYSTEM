@@ -16,6 +16,17 @@ export interface LineItem {
   unitPrice: number;
 }
 
+export type QuotationPayloadDocumentType = typeof QuotationPayloadDocumentType[keyof typeof QuotationPayloadDocumentType];
+
+
+export const QuotationPayloadDocumentType = {
+  quotation: 'quotation',
+  invoice: 'invoice',
+  receipt: 'receipt',
+  delivery_note: 'delivery_note',
+  sale_order: 'sale_order',
+} as const;
+
 export type QuotationPayloadDiscountType = typeof QuotationPayloadDiscountType[keyof typeof QuotationPayloadDiscountType];
 
 
@@ -25,6 +36,7 @@ export const QuotationPayloadDiscountType = {
 } as const;
 
 export interface QuotationPayload {
+  documentType?: QuotationPayloadDocumentType;
   quotationNumber: string;
   date: string;
   validUntil: string;
@@ -50,6 +62,7 @@ export type QuotationRecord = QuotationPayload & {
 
 export interface QuotationSummary {
   id: number;
+  documentType?: string;
   quotationNumber: string;
   clientName: string;
   companyName?: string;
@@ -75,6 +88,53 @@ export type InventoryItemRecord = InventoryItemPayload & {
   id: number;
   createdAt: string;
   updatedAt: string;
+};
+
+export type LeadPayloadStatus = typeof LeadPayloadStatus[keyof typeof LeadPayloadStatus];
+
+
+export const LeadPayloadStatus = {
+  new: 'new',
+  contacted: 'contacted',
+  qualified: 'qualified',
+  lost: 'lost',
+} as const;
+
+export interface LeadPayload {
+  clientName: string;
+  companyName?: string;
+  email?: string;
+  phone?: string;
+  productInterest?: string;
+  status?: LeadPayloadStatus;
+  notes?: string;
+}
+
+export type LeadRecord = LeadPayload & {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type FollowUpPayloadStatus = typeof FollowUpPayloadStatus[keyof typeof FollowUpPayloadStatus];
+
+
+export const FollowUpPayloadStatus = {
+  pending: 'pending',
+  done: 'done',
+  cancelled: 'cancelled',
+} as const;
+
+export interface FollowUpPayload {
+  leadId: number;
+  scheduledDate: string;
+  notes?: string;
+  status?: FollowUpPayloadStatus;
+}
+
+export type FollowUpRecord = FollowUpPayload & {
+  id: number;
+  createdAt: string;
 };
 
 export type ListInventoryItemsParams = {

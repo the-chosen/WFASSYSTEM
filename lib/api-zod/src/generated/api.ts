@@ -21,6 +21,7 @@ export const HealthCheckResponse = zod.object({
  */
 export const ListQuotationsResponseItem = zod.object({
   "id": zod.number(),
+  "documentType": zod.string().optional(),
   "quotationNumber": zod.string(),
   "clientName": zod.string(),
   "companyName": zod.string().optional(),
@@ -35,6 +36,7 @@ export const ListQuotationsResponse = zod.array(ListQuotationsResponseItem)
  * @summary Save a new quotation
  */
 export const CreateQuotationBody = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
   "quotationNumber": zod.string(),
   "date": zod.string(),
   "validUntil": zod.string(),
@@ -66,6 +68,7 @@ export const GetQuotationParams = zod.object({
 })
 
 export const GetQuotationResponse = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
   "quotationNumber": zod.string(),
   "date": zod.string(),
   "validUntil": zod.string(),
@@ -101,6 +104,7 @@ export const UpdateQuotationParams = zod.object({
 })
 
 export const UpdateQuotationBody = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
   "quotationNumber": zod.string(),
   "date": zod.string(),
   "validUntil": zod.string(),
@@ -124,6 +128,7 @@ export const UpdateQuotationBody = zod.object({
 })
 
 export const UpdateQuotationResponse = zod.object({
+  "documentType": zod.enum(['quotation', 'invoice', 'receipt', 'delivery_note', 'sale_order']).optional(),
   "quotationNumber": zod.string(),
   "date": zod.string(),
   "validUntil": zod.string(),
@@ -250,6 +255,170 @@ export const UpdateInventoryItemResponse = zod.object({
  */
 export const DeleteInventoryItemParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List all leads
+ */
+export const ListLeadsResponseItem = zod.object({
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "productInterest": zod.string().optional(),
+  "status": zod.enum(['new', 'contacted', 'qualified', 'lost']).optional(),
+  "notes": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+export const ListLeadsResponse = zod.array(ListLeadsResponseItem)
+
+
+/**
+ * @summary Create a new lead
+ */
+export const CreateLeadBody = zod.object({
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "productInterest": zod.string().optional(),
+  "status": zod.enum(['new', 'contacted', 'qualified', 'lost']).optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Get a lead by ID
+ */
+export const GetLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetLeadResponse = zod.object({
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "productInterest": zod.string().optional(),
+  "status": zod.enum(['new', 'contacted', 'qualified', 'lost']).optional(),
+  "notes": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Update a lead
+ */
+export const UpdateLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLeadBody = zod.object({
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "productInterest": zod.string().optional(),
+  "status": zod.enum(['new', 'contacted', 'qualified', 'lost']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateLeadResponse = zod.object({
+  "clientName": zod.string(),
+  "companyName": zod.string().optional(),
+  "email": zod.string().optional(),
+  "phone": zod.string().optional(),
+  "productInterest": zod.string().optional(),
+  "status": zod.enum(['new', 'contacted', 'qualified', 'lost']).optional(),
+  "notes": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+/**
+ * @summary Delete a lead
+ */
+export const DeleteLeadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List follow-ups for a lead
+ */
+export const ListFollowUpsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListFollowUpsResponseItem = zod.object({
+  "leadId": zod.number(),
+  "scheduledDate": zod.string(),
+  "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'done', 'cancelled']).optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string()
+}))
+export const ListFollowUpsResponse = zod.array(ListFollowUpsResponseItem)
+
+
+/**
+ * @summary Schedule a follow-up for a lead
+ */
+export const CreateFollowUpParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateFollowUpBody = zod.object({
+  "leadId": zod.number(),
+  "scheduledDate": zod.string(),
+  "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'done', 'cancelled']).optional()
+})
+
+
+/**
+ * @summary Update a follow-up
+ */
+export const UpdateFollowUpParams = zod.object({
+  "id": zod.coerce.number(),
+  "fid": zod.coerce.number()
+})
+
+export const UpdateFollowUpBody = zod.object({
+  "leadId": zod.number(),
+  "scheduledDate": zod.string(),
+  "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'done', 'cancelled']).optional()
+})
+
+export const UpdateFollowUpResponse = zod.object({
+  "leadId": zod.number(),
+  "scheduledDate": zod.string(),
+  "notes": zod.string().optional(),
+  "status": zod.enum(['pending', 'done', 'cancelled']).optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string()
+}))
+
+
+/**
+ * @summary Delete a follow-up
+ */
+export const DeleteFollowUpParams = zod.object({
+  "id": zod.coerce.number(),
+  "fid": zod.coerce.number()
 })
 
 

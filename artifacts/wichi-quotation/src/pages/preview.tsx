@@ -6,8 +6,24 @@ import { Button } from '@/components/ui/button';
 import { QuotationHeader } from '@/components/quotation-header';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
-import { loadQuotationData, QuotationData } from '@/lib/quotation-store';
+import { loadQuotationData, QuotationData, DOCUMENT_TYPE_LABELS } from '@/lib/quotation-store';
 import { format, parseISO } from 'date-fns';
+
+const DOC_CLIENT_LABEL: Record<string, string> = {
+  quotation: 'Quotation For',
+  invoice: 'Invoice To',
+  receipt: 'Received From',
+  delivery_note: 'Deliver To',
+  sale_order: 'Order By',
+};
+
+const DOC_DATE2_LABEL: Record<string, string> = {
+  quotation: 'Valid Until',
+  invoice: 'Due Date',
+  receipt: 'Receipt Date',
+  delivery_note: 'Delivery Date',
+  sale_order: 'Order Valid Until',
+};
 
 export default function Preview() {
   const [, setLocation] = useLocation();
@@ -21,6 +37,11 @@ export default function Preview() {
 
   if (!data) return null;
 
+  const docType = data.documentType ?? 'quotation';
+  const docLabel = DOCUMENT_TYPE_LABELS[docType] ?? 'Quotation';
+  const clientLabel = DOC_CLIENT_LABEL[docType] ?? 'For';
+  const date2Label = DOC_DATE2_LABEL[docType] ?? 'Valid Until';
+
   const handleSavePdf = async () => {
     if (!docRef.current) return;
     setExporting(true);
@@ -28,14 +49,12 @@ export default function Preview() {
       const { toPng } = await import('html-to-image');
       const { jsPDF } = await import('jspdf');
 
-      // A4 at 96 dpi = 794 × 1123 px. Fix the capture width so the image
-      // is always exactly A4-wide regardless of the browser viewport size.
       const A4_PX = 794;
       const contentHeight = docRef.current.scrollHeight;
 
       const dataUrl = await toPng(docRef.current, {
         quality: 1,
-        pixelRatio: 2,          // 2× for crisp print quality
+        pixelRatio: 2,
         backgroundColor: '#ffffff',
         width: A4_PX,
         height: contentHeight,
@@ -47,41 +66,27 @@ export default function Preview() {
         },
       });
 
-      // Load image to read actual rendered dimensions
       const img = new Image();
       img.src = dataUrl;
       await new Promise<void>(res => { img.onload = () => res(); });
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pdfW = pdf.internal.pageSize.getWidth();   // 210 mm
-      const pdfH = pdf.internal.pageSize.getHeight();  // 297 mm
+      const pdfW = pdf.internal.pageSize.getWidth();
+      const pdfH = pdf.internal.pageSize.getHeight();
 
-      // img dimensions are in pixels (at pixelRatio 2: naturalWidth = A4_PX * 2)
-      // Map pixel → mm using the A4 width anchor.
-      const mmPerPx = pdfW / img.naturalWidth;          // mm / px
-      const imgHeightMm = img.naturalHeight * mmPerPx;  // total content height in mm
+      const mmPerPx = pdfW / img.naturalWidth;
+      const imgHeightMm = img.naturalHeight * mmPerPx;
 
-      // Slice the image across pages
-      let yOffset = 0; // how many mm of the image we've already printed
+      let yOffset = 0;
       let pageIndex = 0;
       while (yOffset < imgHeightMm) {
         if (pageIndex > 0) pdf.addPage();
-
-        // Position the image so the next slice starts at the top of this page
-        pdf.addImage(
-          dataUrl,
-          'PNG',
-          0,                        // x = left edge
-          -(yOffset),               // y = negative to push already-printed portion above page top
-          pdfW,
-          imgHeightMm,
-        );
-
+        pdf.addImage(dataUrl, 'PNG', 0, -(yOffset), pdfW, imgHeightMm);
         yOffset += pdfH;
         pageIndex++;
       }
 
-      pdf.save(`Quotation-${data.quotationNumber}.pdf`);
+      pdf.save(`${docLabel}-${data.quotationNumber}.pdf`);
     } catch (err) {
       console.error('PDF generation failed:', err);
       alert('PDF generation failed. Please try again.');
@@ -116,11 +121,11 @@ export default function Preview() {
           className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
         >
           {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-          {exporting ? 'Generating PDF...' : 'Save as PDF'}
+          {exporting ? 'Generating PDF...' : `Save as PDF`}
         </Button>
       </div>
 
-      {/* A4 document — fixed 794px (210mm at 96dpi) so PDF capture is always exact */}
+      {/* A4 document */}
       <div
         ref={docRef}
         style={{ width: '794px' }}
@@ -128,16 +133,14 @@ export default function Preview() {
       >
         <div className="px-10 pt-7 pb-6">
 
-          {/* Header */}
           <QuotationHeader />
 
-          {/* Divider */}
           <div className="w-full h-1 bg-gradient-to-r from-primary via-primary/80 to-accent mb-4 rounded-full"></div>
 
-          {/* QUOTATION title + dates */}
+          {/* Document type title + dates */}
           <div className="flex justify-between items-start mb-4">
             <div>
-              <h2 className="text-3xl font-serif font-bold text-primary leading-none mb-1">QUOTATION</h2>
+              <h2 className="text-3xl font-serif font-bold text-primary leading-none mb-1">{docLabel.toUpperCase()}</h2>
               <p className="text-muted-foreground text-xs font-medium">#{data.quotationNumber}</p>
             </div>
             <div className="text-right text-xs space-y-0.5">
@@ -146,7 +149,7 @@ export default function Preview() {
                 <span className="font-semibold text-foreground">{formatDate(data.date)}</span>
               </div>
               <div className="flex justify-end gap-3">
-                <span className="text-muted-foreground font-medium">Valid Until:</span>
+                <span className="text-muted-foreground font-medium">{date2Label}:</span>
                 <span className="font-semibold text-foreground">{formatDate(data.validUntil)}</span>
               </div>
             </div>
@@ -154,7 +157,7 @@ export default function Preview() {
 
           {/* Client block */}
           <div className="bg-muted/10 px-4 py-3 rounded border border-border/50 mb-4 text-xs">
-            <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">Quotation For:</h3>
+            <h3 className="font-bold text-primary mb-1.5 uppercase tracking-wider text-[10px]">{clientLabel}:</h3>
             <div className="space-y-0.5 text-foreground">
               {data.clientName && <p className="font-bold text-sm">{data.clientName}</p>}
               {data.companyName && <p className="font-medium text-primary">{data.companyName}</p>}
@@ -171,7 +174,7 @@ export default function Preview() {
             <LineItemsTable items={data.items} onChange={() => {}} readOnly />
           </div>
 
-          {/* Totals — right-aligned */}
+          {/* Totals */}
           <div className="flex justify-end mb-5">
             <div className="w-full max-w-xs">
               <QuotationTotals data={data} />
@@ -200,7 +203,6 @@ export default function Preview() {
             </div>
           </div>
 
-          {/* Footer note */}
           <div className="mt-4 text-center text-[10px] text-muted-foreground/70">
             <span className="font-bold italic">Thank you for choosing Wichi farms and agro solutions.</span>
           </div>

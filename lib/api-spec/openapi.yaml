@@ -14,6 +14,8 @@ tags:
     description: Quotation management
   - name: inventory
     description: Inventory / product catalogue
+  - name: leads
+    description: Sales leads and follow-ups
 paths:
   /healthz:
     get:
@@ -256,6 +258,227 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /leads:
+    get:
+      operationId: listLeads
+      tags: [leads]
+      summary: List all leads
+      responses:
+        "200":
+          description: List of leads
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeadRecord"
+    post:
+      operationId: createLead
+      tags: [leads]
+      summary: Create a new lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadPayload"
+      responses:
+        "201":
+          description: Created lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadRecord"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leads/{id}:
+    get:
+      operationId: getLead
+      tags: [leads]
+      summary: Get a lead by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lead record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateLead
+      tags: [leads]
+      summary: Update a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadPayload"
+      responses:
+        "200":
+          description: Updated lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteLead
+      tags: [leads]
+      summary: Delete a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leads/{id}/follow-ups:
+    get:
+      operationId: listFollowUps
+      tags: [leads]
+      summary: List follow-ups for a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of follow-ups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FollowUpRecord"
+    post:
+      operationId: createFollowUp
+      tags: [leads]
+      summary: Schedule a follow-up for a lead
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FollowUpPayload"
+      responses:
+        "201":
+          description: Created follow-up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUpRecord"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leads/{id}/follow-ups/{fid}:
+    put:
+      operationId: updateFollowUp
+      tags: [leads]
+      summary: Update a follow-up
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: fid
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FollowUpPayload"
+      responses:
+        "200":
+          description: Updated follow-up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowUpRecord"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteFollowUp
+      tags: [leads]
+      summary: Delete a follow-up
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: fid
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -281,6 +504,9 @@ components:
     QuotationPayload:
       type: object
       properties:
+        documentType:
+          type: string
+          enum: [quotation, invoice, receipt, delivery_note, sale_order]
         quotationNumber:
           type: string
         date:
@@ -342,6 +568,8 @@ components:
       properties:
         id:
           type: integer
+        documentType:
+          type: string
         quotationNumber:
           type: string
         clientName:
@@ -392,3 +620,61 @@ components:
             updatedAt:
               type: string
           required: [id, createdAt, updatedAt]
+
+    LeadPayload:
+      type: object
+      properties:
+        clientName:
+          type: string
+        companyName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        productInterest:
+          type: string
+        status:
+          type: string
+          enum: [new, contacted, qualified, lost]
+        notes:
+          type: string
+      required: [clientName]
+
+    LeadRecord:
+      allOf:
+        - $ref: "#/components/schemas/LeadPayload"
+        - type: object
+          properties:
+            id:
+              type: integer
+            createdAt:
+              type: string
+            updatedAt:
+              type: string
+          required: [id, createdAt, updatedAt]
+
+    FollowUpPayload:
+      type: object
+      properties:
+        leadId:
+          type: integer
+        scheduledDate:
+          type: string
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [pending, done, cancelled]
+      required: [leadId, scheduledDate]
+
+    FollowUpRecord:
+      allOf:
+        - $ref: "#/components/schemas/FollowUpPayload"
+        - type: object
+          properties:
+            id:
+              type: integer
+            createdAt:
+              type: string
+          required: [id, createdAt]

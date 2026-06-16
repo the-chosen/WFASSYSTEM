@@ -8,6 +8,7 @@
 
 export interface QuotationSummary {
   id: number;
+  documentType?: string;
   quotationNumber: string;
   clientName: string;
   companyName?: string;

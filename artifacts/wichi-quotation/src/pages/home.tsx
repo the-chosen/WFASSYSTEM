@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useLocation, useSearch } from 'wouter';
-import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2, Package } from 'lucide-react';
+import { FileText, Save, FileCheck, Copy, Upload, History, Plus, Loader2, CheckCircle2, Package, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,21 +10,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { LineItemsTable } from '@/components/line-items-table';
 import { QuotationTotals } from '@/components/quotation-totals';
-import { loadQuotationData, saveQuotationData, defaultQuotationData, QuotationData } from '@/lib/quotation-store';
+import { loadQuotationData, saveQuotationData, defaultQuotationData, QuotationData, DOCUMENT_TYPE_LABELS, DOCUMENT_TYPE_PREFIX, DocumentType } from '@/lib/quotation-store';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCreateQuotation, useUpdateQuotation, useGetQuotation } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { InventoryPicker } from '@/components/inventory-picker';
 
-function generateNextNumber(current: string): string {
+function generateNextNumber(current: string, docType: DocumentType = 'quotation'): string {
   const year = new Date().getFullYear();
+  const prefix = DOCUMENT_TYPE_PREFIX[docType];
   if (current.includes(year.toString())) {
     const parts = current.split('-');
-    const seq = parseInt(parts[2], 10);
-    if (!isNaN(seq)) return `QT-${year}-${(seq + 1).toString().padStart(3, '0')}`;
+    const seq = parseInt(parts[parts.length - 1], 10);
+    if (!isNaN(seq)) return `${prefix}-${year}-${(seq + 1).toString().padStart(3, '0')}`;
   }
-  return `QT-${year}-001`;
+  return `${prefix}-${year}-001`;
 }
 
 export default function Home() {
@@ -49,6 +50,7 @@ export default function Home() {
     if (remoteQuotation && loadId) {
       const q = remoteQuotation;
       const mapped: QuotationData = {
+        documentType: (q.documentType as DocumentType) ?? 'quotation',
         quotationNumber: q.quotationNumber,
         date: q.date,
         validUntil: q.validUntil,
@@ -193,9 +195,9 @@ export default function Home() {
           <div>
             <h1 className="text-3xl font-serif font-bold text-primary flex items-center gap-3">
               <FileText className="w-8 h-8 text-accent" />
-              Quotation Builder
+              WICHI System
             </h1>
-            <p className="text-muted-foreground mt-1">Create professional quotations for Wichi Farms clients.</p>
+            <p className="text-muted-foreground mt-1">Wichi Farms And Agro Solutions — Document Management</p>
           </div>
           <div className="flex gap-2 flex-wrap justify-end">
             <Button variant="outline" size="sm" onClick={handleNew}>
@@ -206,6 +208,9 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="sm" onClick={() => setLocation('/inventory')}>
               <Package className="w-4 h-4 mr-1" /> Inventory
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setLocation('/leads')}>
+              <Users className="w-4 h-4 mr-1" /> Leads
             </Button>
             <Button
               variant="outline"
@@ -263,10 +268,31 @@ export default function Home() {
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="quotationNumber">Quotation Number</Label>
+                <Label>Document Type</Label>
+                <Select
+                  value={data.documentType ?? 'quotation'}
+                  onValueChange={val => {
+                    const t = val as DocumentType;
+                    const prefix = DOCUMENT_TYPE_PREFIX[t];
+                    const year = new Date().getFullYear();
+                    const newNum = `${prefix}-${year}-001`;
+                    handleChange('documentType', t);
+                    handleChange('quotationNumber', newNum);
+                  }}
+                >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(DOCUMENT_TYPE_LABELS) as [DocumentType, string][]).map(([v, l]) => (
+                      <SelectItem key={v} value={v}>{l}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="quotationNumber">Document Number</Label>
                 <div className="flex gap-2">
                   <Input id="quotationNumber" value={data.quotationNumber} onChange={e => handleChange('quotationNumber', e.target.value)} />
-                  <Button variant="outline" size="icon" onClick={() => handleChange('quotationNumber', generateNextNumber(data.quotationNumber))} title="Auto-increment">
+                  <Button variant="outline" size="icon" onClick={() => handleChange('quotationNumber', generateNextNumber(data.quotationNumber, data.documentType ?? 'quotation'))} title="Auto-increment">
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>

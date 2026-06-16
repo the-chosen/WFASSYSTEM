@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import Preview from "@/pages/preview";
 import History from "@/pages/history";
 import Inventory from "@/pages/inventory";
+import Leads from "@/pages/leads";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/preview" component={Preview} />
       <Route path="/history" component={History} />
       <Route path="/inventory" component={Inventory} />
+      <Route path="/leads" component={Leads} />
       <Route component={NotFound} />
     </Switch>
   );

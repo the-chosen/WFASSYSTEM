@@ -7,12 +7,19 @@
  */
 
 export * from './errorResponse';
+export * from './followUpPayload';
+export * from './followUpPayloadStatus';
+export * from './followUpRecord';
 export * from './healthStatus';
 export * from './inventoryItemPayload';
 export * from './inventoryItemRecord';
+export * from './leadPayload';
+export * from './leadPayloadStatus';
+export * from './leadRecord';
 export * from './lineItem';
 export * from './listInventoryItemsParams';
 export * from './quotationPayload';
 export * from './quotationPayloadDiscountType';
+export * from './quotationPayloadDocumentType';
 export * from './quotationRecord';
 export * from './quotationSummary';

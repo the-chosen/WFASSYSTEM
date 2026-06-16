@@ -7,8 +7,10 @@
  */
 import type { LineItem } from './lineItem';
 import type { QuotationPayloadDiscountType } from './quotationPayloadDiscountType';
+import type { QuotationPayloadDocumentType } from './quotationPayloadDocumentType';
 
 export interface QuotationPayload {
+  documentType?: QuotationPayloadDocumentType;
   quotationNumber: string;
   date: string;
   validUntil: string;

@@ -1,3 +1,21 @@
+export type DocumentType = 'quotation' | 'invoice' | 'receipt' | 'delivery_note' | 'sale_order';
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  quotation: 'Quotation',
+  invoice: 'Invoice',
+  receipt: 'Sale Receipt',
+  delivery_note: 'Delivery Note',
+  sale_order: 'Sale Order',
+};
+
+export const DOCUMENT_TYPE_PREFIX: Record<DocumentType, string> = {
+  quotation: 'QT',
+  invoice: 'INV',
+  receipt: 'RCP',
+  delivery_note: 'DN',
+  sale_order: 'SO',
+};
+
 export interface LineItem {
   id: string;
   description: string;
@@ -6,6 +24,7 @@ export interface LineItem {
 }
 
 export interface QuotationData {
+  documentType: DocumentType;
   quotationNumber: string;
   date: string;
   validUntil: string;
@@ -26,6 +45,7 @@ export interface QuotationData {
 const STORAGE_KEY = 'wichi-quotation-data';
 
 export const defaultQuotationData: QuotationData = {
+  documentType: 'quotation',
   quotationNumber: 'QT-2024-001',
   date: new Date().toISOString().split('T')[0],
   validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -63,19 +83,26 @@ export function saveQuotationData(data: QuotationData) {
   }
 }
 
+export function generateNextDocNumber(type: DocumentType): string {
+  const prefix = DOCUMENT_TYPE_PREFIX[type];
+  const year = new Date().getFullYear();
+  return `${prefix}-${year}-001`;
+}
+
 export function generateNextQuotationNumber() {
   const currentData = loadQuotationData();
   const currentNumber = currentData.quotationNumber;
   const year = new Date().getFullYear();
-  
+
   if (currentNumber.includes(year.toString())) {
     const parts = currentNumber.split('-');
-    const sequence = parseInt(parts[2], 10);
+    const sequence = parseInt(parts[parts.length - 1], 10);
     if (!isNaN(sequence)) {
-      return `QT-${year}-${(sequence + 1).toString().padStart(3, '0')}`;
+      const prefix = DOCUMENT_TYPE_PREFIX[currentData.documentType] ?? 'QT';
+      return `${prefix}-${year}-${(sequence + 1).toString().padStart(3, '0')}`;
     }
   }
-  
+
   return `QT-${year}-001`;
 }
 
