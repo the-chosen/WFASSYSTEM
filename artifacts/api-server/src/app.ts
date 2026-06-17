@@ -42,7 +42,6 @@ app.use(
     store: new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "sessions",
-      createTableIfMissing: true,
     }),
     secret: process.env.SESSION_SECRET ?? "wichi-farms-secret-change-in-prod",
     resave: false,
