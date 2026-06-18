@@ -3,8 +3,8 @@ FROM node:24-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Copy config files
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.json tsconfig.base.json .npmrc ./
 COPY lib/db/package.json ./lib/db/package.json
 COPY artifacts/api-server/package.json ./artifacts/api-server/package.json
 COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/package.json
