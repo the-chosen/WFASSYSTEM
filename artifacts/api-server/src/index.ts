@@ -18,7 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function initDb() {
   if (!process.env.DATABASE_URL?.startsWith("postgres")) return;
-  const ADMIN_PASSWORD_HASH = "$2b$10$MqOTLCk3L5J4aQPjaV7EguE473R4JqHdf6NBhd6q6iqb4eTNxNqbe";
+  const ADMIN_PASSWORD_HASH = "$2b$10$o/4X8TWF/KVfNgi2ZRx5w.x4rrphh0ji8PV8BNnPWdsu/wvjZG/7u";
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
       sid VARCHAR NOT NULL PRIMARY KEY,
