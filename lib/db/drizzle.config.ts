@@ -10,8 +10,8 @@ if (!databaseUrl) {
 
 export default defineConfig({
   schema: databaseUrl?.startsWith("postgres")
-    ? path.join(__dirname, "./src/schema/pg")
-    : path.join(__dirname, "./src/schema/sqlite"),
+    ? "./src/schema/pg/*.ts"
+    : "./src/schema/sqlite/*.ts",
   dialect: databaseUrl?.startsWith("postgres") ? "postgresql" : "sqlite",
   dbCredentials: databaseUrl
     ? { url: databaseUrl }
