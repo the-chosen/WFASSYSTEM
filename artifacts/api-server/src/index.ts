@@ -20,6 +20,11 @@ async function initDb() {
   if (!process.env.DATABASE_URL?.startsWith("postgres")) return;
   const ADMIN_PASSWORD_HASH = "$2b$10$qjnMeCA0tvIyzdeuqGZCcOs05cTJfvVhtEh0KOjDVCjQ5QH70re3u";
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS session (
+      sid VARCHAR NOT NULL PRIMARY KEY,
+      sess JSON NOT NULL,
+      expire TIMESTAMPTZ NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, email TEXT NOT NULL DEFAULT '',
       password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'user',
