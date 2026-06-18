@@ -18,7 +18,7 @@ COPY artifacts ./artifacts
 COPY scripts ./scripts
 
 RUN pnpm run build
-RUN CI=true pnpm prune --prod
+RUN ls -la artifacts/wichi-quotation/dist/ && cat artifacts/wichi-quotation/dist/index.html | head -c 200
 
 EXPOSE 5000
 
