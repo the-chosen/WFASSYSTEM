@@ -1,3 +1,4 @@
+import path from "path";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -37,23 +38,35 @@ app.use(cors({
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-app.use(
-  session({
-    store: new PgSession({
+// Session store configuration
+const sessionStore = process.env.DATABASE_URL?.startsWith("postgres")
+  ? new PgSession({
       conString: process.env.DATABASE_URL,
       tableName: "sessions",
-    }),
+    })
+  : new session.MemoryStore(); // Fallback to memory store for SQLite
+
+app.use(
+  session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET ?? "wichi-farms-secret-change-in-prod",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false, // set true behind HTTPS in production
+      secure: process.env.NODE_ENV === "production", // HTTPS in production
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   }),
 );
 
 app.use("/api", router);
+
+const frontendDist = path.resolve("artifacts/wichi-quotation/dist");
+app.use(express.static(frontendDist));
+
+app.get(/\/.*/, (_req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 export default app;

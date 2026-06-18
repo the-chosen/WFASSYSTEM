@@ -1,14 +1,19 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.warn("⚠️  DATABASE_URL not set. Using local SQLite for development.");
+  console.warn("Set DATABASE_URL for production cloud database.");
 }
 
 export default defineConfig({
-  schema: path.join(__dirname, "./src/schema/index.ts"),
-  dialect: "postgresql",
-  dbCredentials: {
-    url: process.env.DATABASE_URL,
-  },
+  schema: databaseUrl?.startsWith("postgres")
+    ? path.join(__dirname, "./src/schema/pg")
+    : path.join(__dirname, "./src/schema/sqlite"),
+  dialect: databaseUrl?.startsWith("postgres") ? "postgresql" : "sqlite",
+  dbCredentials: databaseUrl
+    ? { url: databaseUrl }
+    : { url: "./local-dev.sqlite" },
 });

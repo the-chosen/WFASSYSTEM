@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "artifacts/api-server/package.json",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "artifacts/api-server/dist/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "artifacts/wichi-quotation/dist/index.html"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "SESSION_SECRET": "@session_secret"
+  }
+}

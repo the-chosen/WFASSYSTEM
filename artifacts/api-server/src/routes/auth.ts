@@ -24,10 +24,18 @@ router.post("/auth/login", async (req, res) => {
     return;
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
-  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+
+  if (!user) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }
+
+  const match = await bcrypt.compare(password, user.passwordHash);
+  if (!match) {
+    res.status(401).json({ error: "Invalid username or password" });
+    return;
+  }
+
   (req.session as any).userId = user.id;
   (req.session as any).userRole = user.role;
   res.json(safeUser(user));

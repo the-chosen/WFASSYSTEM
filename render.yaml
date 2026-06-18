@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: agro-quote-api
+    env: node
+    plan: free
+    buildCommand: pnpm install && pnpm run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agro-quote-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: agro-quote-db
+    databaseName: agro_quote_system
+    user: agro_user
