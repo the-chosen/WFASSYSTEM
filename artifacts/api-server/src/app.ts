@@ -62,7 +62,7 @@ app.use(
 
 app.use("/api", router);
 
-const frontendDist = path.resolve("artifacts/wichi-quotation/dist");
+const frontendDist = path.resolve(__dirname, "../../../artifacts/wichi-quotation/dist");
 app.use(express.static(frontendDist));
 
 app.get(/\/.*/, (_req, res) => {
