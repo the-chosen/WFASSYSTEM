@@ -18,7 +18,7 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function initDb() {
   if (!process.env.DATABASE_URL?.startsWith("postgres")) return;
-  const ADMIN_PASSWORD_HASH = "$2b$10$qjnMeCA0tvIyzdeuqGZCcOs05cTJfvVhtEh0KOjDVCjQ5QH70re3u";
+  const ADMIN_PASSWORD_HASH = "$2b$10$MqOTLCk3L5J4aQPjaV7EguE473R4JqHdf6NBhd6q6iqb4eTNxNqbe";
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sessions (
       sid VARCHAR NOT NULL PRIMARY KEY,
@@ -63,13 +63,17 @@ async function initDb() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
   `);
-  const existing = await pool.query("SELECT id FROM users WHERE username = $1", ["admin"]);
+  const existing = await pool.query("SELECT id, password_hash FROM users WHERE username = $1", ["admin"]);
   if (existing.rows.length === 0) {
     await pool.query(
       "INSERT INTO users (username, email, password_hash, role, display_name) VALUES ($1,$2,$3,$4,$5)",
       ["admin", "admin@example.com", ADMIN_PASSWORD_HASH, "super_admin", "Administrator"],
     );
     logger.info("Seeded default admin user (admin / admin)");
+  } else {
+    // Always reset password hash to ensure it matches "admin"
+    await pool.query("UPDATE users SET password_hash = $1 WHERE username = 'admin'", [ADMIN_PASSWORD_HASH]);
+    logger.info("Reset admin password");
   }
 }
 
