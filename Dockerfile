@@ -18,7 +18,7 @@ COPY artifacts ./artifacts
 COPY scripts ./scripts
 
 RUN pnpm run build
-RUN pnpm prune --prod
+RUN CI=true pnpm prune --prod
 
 EXPOSE 5000
 
